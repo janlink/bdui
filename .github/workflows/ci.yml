@@ -24,7 +24,7 @@ jobs:
         run: bun install --frozen-lockfile
 
       - name: Install Beads CLI
-        run: npm install --global @beads/bd
+        run: npm install --global @beads/bd@1.2.2
 
       - name: Run quality gates
         run: bun run check

@@ -57,9 +57,16 @@ test('mutations pass user values as argv and use current create, update, and clo
       description: 'spaces and $(commands) stay literal',
       priority: 1,
       issueType: 'decision',
+      assignee: 'temporary-owner',
       labels: ['adapter-test'],
     });
-    await updateIssue({ id, title: 'Updated | still literal', description: 'new value; echo nope', priority: 2 });
+    await updateIssue({
+      id,
+      title: 'Updated | still literal',
+      description: 'new value; echo nope',
+      priority: 2,
+      assignee: '',
+    });
 
     const openData = await loadBeads(join(repo, '.beads'));
     expect(openData.byId.get(id)).toEqual(expect.objectContaining({
@@ -69,6 +76,7 @@ test('mutations pass user values as argv and use current create, update, and clo
       status: 'open',
       issue_type: 'decision',
     }));
+    expect(openData.byId.get(id)?.assignee ?? '').toBe('');
     await expect(access(marker)).rejects.toThrow();
 
     await closeIssue(id, 'adapter test complete');

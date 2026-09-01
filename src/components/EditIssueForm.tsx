@@ -212,7 +212,7 @@ export function EditIssueForm({ issue, onClose, onSuccess }: EditIssueFormProps)
         params.status = formData.status;
       }
       if (formData.assignee !== (issue.assignee || '')) {
-        params.assignee = formData.assignee || undefined;
+        params.assignee = formData.assignee;
       }
 
       const currentLabels = issue.labels?.join(', ') || '';
