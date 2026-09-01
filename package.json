@@ -1,12 +1,14 @@
 {
   "name": "bdui",
-  "version": "0.1.1",
+  "version": "0.2.0",
   "description": "TUI visualizer for bd (beads) issue tracker",
   "type": "module",
   "main": "src/index.tsx",
   "scripts": {
     "dev": "bun run src/index.tsx",
     "test": "bun test src",
+    "typecheck": "tsc --noEmit",
+    "check": "bun run test && bun run typecheck && bun run build",
     "test:notifications": "bun run test-notification.ts",
     "build": "bun build --compile ./src/index.tsx --outfile bdui",
     "build:all": "bun run build:macos && bun run build:linux && bun run build:windows",

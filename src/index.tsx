@@ -2,6 +2,9 @@
 import React from 'react';
 import { render } from 'ink';
 import { App } from './components/App';
+import { handleCliArgs } from './cli';
+
+if (handleCliArgs(process.argv.slice(2))) process.exit(0);
 
 // Render the app
 const { unmount, waitUntilExit } = render(<App />);

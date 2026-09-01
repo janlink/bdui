@@ -9,8 +9,38 @@ permissions:
   contents: write
 
 jobs:
+  quality:
+    name: Test and typecheck
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Verify release tag matches package version
+        shell: bash
+        run: |
+          package_version=$(node -p "require('./package.json').version")
+          expected_tag="v${package_version}"
+          if [[ "${GITHUB_REF_NAME}" != "${expected_tag}" ]]; then
+            echo "Release tag ${GITHUB_REF_NAME} does not match package version ${expected_tag}" >&2
+            exit 1
+          fi
+
+      - name: Setup Bun
+        uses: oven-sh/setup-bun@v2
+
+      - name: Install dependencies
+        run: bun install --frozen-lockfile
+
+      - name: Install Beads CLI
+        run: npm install --global @beads/bd
+
+      - name: Run tests and typecheck
+        run: bun run test && bun run typecheck
+
   build:
     name: Build binaries
+    needs: quality
     runs-on: ${{ matrix.os }}
     strategy:
       matrix:

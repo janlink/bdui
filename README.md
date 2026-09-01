@@ -1,6 +1,6 @@
 # BD TUI 🎯
 
-A beautiful, real-time Text User Interface (TUI) visualizer for the [bd (beads)](https://github.com/steveyegge/beads) issue tracker.
+A beautiful, real-time Text User Interface (TUI) visualizer for the [bd (Beads)](https://github.com/gastownhall/beads) issue tracker.
 
 ![License](https://img.shields.io/badge/license-MIT-blue.svg)
 ![Platform](https://img.shields.io/badge/platform-macOS%20%7C%20Linux%20%7C%20Windows-lightgrey.svg)
@@ -11,13 +11,13 @@ A beautiful, real-time Text User Interface (TUI) visualizer for the [bd (beads)]
 ## ✨ Features
 
 ### 📊 Multiple Visualizations
-- **Kanban Board** - Classic 4-column view (Open, In Progress, Blocked, Closed)
+- **Kanban Board** - Five-column view (Open, In Progress, Blocked, Closed, Other)
 - **Tree View** - Hierarchical parent-child relationships with interactive navigation
 - **Dependency Graph** - ASCII art visualization of issue dependencies
 - **Statistics Dashboard** - Comprehensive analytics with visual bar charts
 
 ### 🎨 Rich User Experience
-- **Real-time Updates** - File watching with automatic refresh
+- **Real-time Updates** - Serialized polling through the supported `bd` CLI
 - **Search & Filter** - Full-text search across title, description, and ID
 - **Custom Themes** - 5 built-in color schemes (Default, Ocean, Forest, Sunset, Monochrome)
 - **Responsive Layout** - Adapts to terminal size with smart column hiding
@@ -25,7 +25,7 @@ A beautiful, real-time Text User Interface (TUI) visualizer for the [bd (beads)]
 
 ### ⚡ Issue Management
 - **Create Issues** - Add new issues directly from the TUI
-- **Edit Issues** - Modify any field (title, description, priority, status, assignee, labels)
+- **Edit Issues** - Modify title, description, priority, status, assignee, and labels
 - **Export/Copy** - Export issues in Markdown, JSON, or plain text format
 - **Desktop Notifications** - Native OS notifications with custom icons for status changes
 
@@ -38,9 +38,9 @@ A beautiful, real-time Text User Interface (TUI) visualizer for the [bd (beads)]
 ## 🚀 Installation
 
 ### Prerequisites
-- [Bun](https://bun.sh) runtime (required)
-- [bd (beads)](https://github.com/steveyegge/beads) issue tracker
-- A `.beads/` directory with `beads.db` in your project
+- A current [bd (Beads)](https://github.com/gastownhall/beads) installation
+- An active Beads workspace (`bd where --json` must succeed)
+- [Bun](https://bun.sh) only when running from source; release binaries include the runtime
 
 ### Homebrew (macOS)
 
@@ -111,7 +111,7 @@ Binaries will be created in the `dist/` directory (~50-60 MB each, includes Bun 
 
 ### Basic Usage
 
-Navigate to a directory containing a `.beads/` folder and run:
+Navigate to a directory where `bd where --json` resolves an active workspace and run:
 
 ```bash
 bdui
@@ -123,7 +123,7 @@ Or from the source directory:
 bun run dev
 ```
 
-The app will automatically discover the `.beads/` directory by walking up the directory tree (like git).
+The app discovers the active workspace with `bd where --json`. It reads and writes through public `bd --json` commands, so embedded and server-backed Dolt workspaces are supported without accessing Beads' internal database schema.
 
 ### Keyboard Shortcuts
 
@@ -150,8 +150,14 @@ The app will automatically discover the `.beads/` directory by walking up the di
 - `c` - Clear all filters and search
 - `ESC` - Close search/filter/form panels
 
+#### Command Bar
+- `:` or `g` - Open the command bar
+- `p 0` … `p 4` - Set the selected issue priority
+- `s o`, `s i`, `s b`, `s c` - Set open, in-progress, blocked, or closed status
+- `new`, `edit`, `help` - Open the corresponding UI
+
 #### Other
-- `r` - Refresh data from database
+- `r` - Refresh data through `bd`
 - `n` - Toggle notifications
 - `?` - Show help
 - `q` or `Ctrl+C` - Quit
@@ -159,15 +165,16 @@ The app will automatically discover the `.beads/` directory by walking up the di
 ## 🎨 Views
 
 ### Kanban View (Default)
-The main view shows issues organized in 4 columns:
+The main view shows issues organized in five columns:
 - **Open** - New or ready-to-work issues
 - **In Progress** - Currently being worked on
-- **Blocked** - Issues waiting on dependencies
+- **Blocked** - Issues waiting on dependencies or stored as blocked
 - **Closed** - Completed issues
+- **Other** - Deferred, pinned, hooked, custom, and future statuses; cards retain the raw status
 
 Features:
-- Color-coded priorities (P0-P4)
-- Type indicators (epic, feature, bug, task, chore)
+- Beads priority semantics: P0 Critical, P1 High, P2 Medium, P3 Low, P4 Backlog
+- Type indicators including epic, feature, bug, task, chore, and decision
 - Label tags
 - Per-column pagination and selection
 - Responsive layout (adapts to terminal size)
@@ -192,7 +199,7 @@ Visualizes issue dependencies:
 Comprehensive analytics:
 - **Status Distribution** - Visual bar chart of issue statuses
 - **Priority Breakdown** - Distribution across P0-P4
-- **Issue Type Distribution** - Epic, feature, bug, task, chore counts
+- **Issue Type Distribution** - Epic, feature, bug, task, chore, decision, and other counts
 - **Key Metrics** - Completion rate, blocked rate, dependency count
 - **Top Assignees** - Most active team members
 - **Top Labels** - Most used labels
@@ -246,7 +253,7 @@ Select any issue and press `e` to open the edit form:
 - Press Enter to save changes
 - ESC to cancel
 
-Changes are immediately written to the bd database and reflected in the UI.
+Changes run through `bd create`, `bd update`, and `bd close`, then refresh from `bd list --json`.
 
 ## 📤 Exporting Issues
 
@@ -287,7 +294,7 @@ Use ↑/↓ or k/j to browse themes. Each theme shows a live color preview. Pres
 - **Assignee** - Filter by assigned person
 - **Tags** - Filter by labels (multi-select)
 - **Priority** - Filter by P0-P4
-- **Status** - Filter by open/in_progress/blocked/closed
+- **Status** - Filter by open/in_progress/blocked/closed/other
 - Tab to cycle between filter types
 - Space/Enter to toggle selections
 - ESC to close
@@ -298,13 +305,13 @@ Removes all active search and filter criteria.
 ## 📊 Responsive Layout
 
 ### Terminal Size Adaptation
-- **Wide (>160 cols)**: All 4 columns + detail panel
-- **Medium (80-160 cols)**: All 4 columns
-- **Narrow (40-80 cols)**: 2 columns
-- **Very narrow (<40 cols)**: 1 column
+- **Extra wide (250+ cols)**: All five columns plus the detail panel
+- **Wide (195-249 cols)**: All five columns
+- **Medium (74-194 cols)**: Two columns; the window follows the active column
+- **Narrow (60-73 cols)**: One active column
 
 ### Minimum Requirements
-- Width: 80 columns (recommended: 120+)
+- Width: 60 columns (recommended: 125+)
 - Height: 24 rows (recommended: 30+)
 - True color support recommended but not required
 
@@ -312,51 +319,36 @@ Terminal dimensions are shown in the header (e.g., "120x30").
 
 ## 🧪 Testing
 
-### Test with Sample Data
-A test project with sample issues is included:
-
 ```bash
-cd /tmp/bdui-test
-bun run /path/to/bdui/src/index.tsx
-```
+# Automated tests, TypeScript validation, and a compiled build
+bun run check
 
-The test project includes:
-- 11 diverse issues (varied priorities, types, statuses)
-- Multiple assignees (alice, bob, charlie, diana)
-- Parent-child relationships (epic with children)
-- Blocking dependencies
-- Various labels and metadata
-
-See `/tmp/bdui-test/README.md` for a complete feature walkthrough.
-
-### Manual Testing
-```bash
-# Test notifications
+# Optional desktop notification check
 bun run test:notifications
 
-# Run in development mode
-bun run dev
-
-# Test with your own bd project
+# Exercise the TUI against a current Beads workspace
 cd /path/to/your/project
 bun run /path/to/bdui/src/index.tsx
 ```
 
+The automated suite creates isolated temporary embedded-Dolt workspaces with the installed `bd` CLI. It also covers argument safety, polling lifecycle, status normalization, filtering, navigation, and priority semantics.
+
 ## 🏗️ Architecture
 
 ### Technology Stack
-- **Runtime**: Bun (native SQLite, faster than Node.js)
+- **Runtime**: Bun
 - **UI Framework**: Ink (React for CLIs)
 - **State Management**: Zustand
-- **Database**: SQLite (direct reads from bd's database via `bun:sqlite`)
+- **Beads integration**: Public `bd --json` CLI contract
 - **Notifications**: node-notifier (cross-platform)
 
 ### Data Flow
-1. **Database Reading** - Direct SQLite queries to `beads.db`
-2. **File Watching** - Debounced `fs.watch` monitoring with 100ms debounce
-3. **State Management** - Zustand store with normalized data structure
-4. **Real-time Updates** - Pub/sub pattern for database changes
-5. **Notifications** - Status change detection with OS notifications
+1. **Workspace discovery** - `bd where --json`
+2. **Issue reads** - `bd list --all --limit 0 --json`
+3. **Normalization** - Tolerant DTO mapping with raw statuses, types, and dependency edges preserved
+4. **Updates** - Shell-free argv calls to `bd create`, `bd update`, and `bd close`
+5. **Refresh** - Serialized polling publishes only changed successful snapshots and retains the last good state on transient errors
+6. **State and notifications** - Zustand drives the UI and detects status changes
 
 ### Project Structure
 ```
@@ -364,8 +356,7 @@ bdui/
 ├── src/
 │   ├── components/       # React/Ink components
 │   │   ├── App.tsx       # Main app with keyboard handling
-│   │   ├── Board.tsx     # View router
-│   │   ├── KanbanView/   # 4-column Kanban board
+│   │   ├── Board.tsx     # View router and five-column Kanban board
 │   │   ├── TreeView.tsx  # Hierarchical tree view
 │   │   ├── DependencyGraph.tsx
 │   │   ├── StatsView.tsx
@@ -375,9 +366,10 @@ bdui/
 │   │   ├── ThemeSelector.tsx
 │   │   └── ...
 │   ├── bd/               # bd integration
-│   │   ├── parser.ts     # SQLite database reading
-│   │   ├── watcher.ts    # File watching
-│   │   └── commands.ts   # bd CLI integration
+│   │   ├── client.ts     # Bounded, shell-free bd process boundary
+│   │   ├── parser.ts     # Public JSON normalization
+│   │   ├── watcher.ts    # Serialized polling and deduplication
+│   │   └── commands.ts   # Current create/update/close commands
 │   ├── state/            # State management
 │   │   └── store.ts      # Zustand store
 │   ├── themes/           # Theme definitions
@@ -399,7 +391,7 @@ bdui/
 
 ## 🤝 Contributing
 
-Contributions are welcome! This project uses [bd (beads)](https://github.com/steveyegge/beads) for issue tracking.
+Contributions are welcome! This project uses [bd (Beads)](https://github.com/gastownhall/beads) for issue tracking.
 
 ### Development Setup
 ```bash
@@ -409,6 +401,9 @@ cd bdui
 
 # Install dependencies
 bun install
+
+# Run quality checks
+bun run check
 
 # Run in development mode
 bun run dev
@@ -427,7 +422,7 @@ MIT License - See LICENSE file for details
 
 ## 🙏 Acknowledgments
 
-- [bd (beads)](https://github.com/steveyegge/beads) - The issue tracker that powers this TUI
+- [bd (Beads)](https://github.com/gastownhall/beads) - The issue tracker that powers this TUI
 - [Ink](https://github.com/vadimdemedes/ink) - React for CLIs
 - [Bun](https://bun.sh) - Fast JavaScript runtime
 - [Zustand](https://github.com/pmndrs/zustand) - State management
@@ -437,8 +432,8 @@ MIT License - See LICENSE file for details
 
 For issues, questions, or contributions:
 1. Check the documentation in `CLAUDE.md`
-2. Review existing bd issues in this repository
-3. Create a new bd issue with detailed information
+2. Review existing GitHub issues and pull requests
+3. Open a GitHub issue with reproduction steps and version details
 
 ---
 
