@@ -15,13 +15,13 @@ export const LAYOUT = {
   minTerminalHeight: 20,
 } as const;
 
-// Priority labels (0-4, where 4 is highest)
+// Beads priorities (0 is most urgent, 4 is backlog)
 export const PRIORITY_LABELS: Record<number, string> = {
-  0: 'Lowest',
-  1: 'Low',
+  0: 'Critical',
+  1: 'High',
   2: 'Medium',
-  3: 'High',
-  4: 'Critical',
+  3: 'Low',
+  4: 'Backlog',
 };
 
 // Status labels
@@ -30,6 +30,7 @@ export const STATUS_LABELS: Record<string, string> = {
   in_progress: 'In Progress',
   blocked: 'Blocked',
   closed: 'Closed',
+  other: 'Other',
 };
 
 // Issue type labels
@@ -39,6 +40,7 @@ export const TYPE_LABELS: Record<string, string> = {
   bug: 'Bug',
   task: 'Task',
   chore: 'Chore',
+  decision: 'Decision',
 };
 
 // View names for footer display
@@ -52,11 +54,11 @@ export const VIEW_NAMES: Record<string, string> = {
 // Helper function to get priority color from theme
 export function getPriorityColor(priority: number, theme: Theme): string {
   const colors: Record<number, string> = {
-    0: theme.colors.priorityLowest,
-    1: theme.colors.priorityLow,
+    0: theme.colors.priorityCritical,
+    1: theme.colors.priorityHigh,
     2: theme.colors.priorityMedium,
-    3: theme.colors.priorityHigh,
-    4: theme.colors.priorityCritical,
+    3: theme.colors.priorityLow,
+    4: theme.colors.priorityLowest,
   };
   return colors[priority] || theme.colors.textDim;
 }
@@ -68,6 +70,7 @@ export function getStatusColor(status: string, theme: Theme): string {
     in_progress: theme.colors.statusInProgress,
     blocked: theme.colors.statusBlocked,
     closed: theme.colors.statusClosed,
+    other: theme.colors.textDim,
   };
   return colors[status] || theme.colors.text;
 }
@@ -80,6 +83,7 @@ export function getTypeColor(type: string, theme: Theme): string {
     bug: theme.colors.typeBug,
     task: theme.colors.typeTask,
     chore: theme.colors.typeChore,
+    decision: theme.colors.accent,
   };
   return colors[type] || theme.colors.text;
 }

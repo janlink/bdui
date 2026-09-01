@@ -14,7 +14,7 @@ interface EditIssueFormProps {
 
 type FormField = 'title' | 'status' | 'priority' | 'description' | 'assignee' | 'labels';
 
-const STATUSES: Array<'open' | 'closed' | 'in_progress' | 'blocked'> = ['open', 'in_progress', 'blocked', 'closed'];
+const EDITABLE_STATUSES = ['open', 'in_progress', 'blocked', 'closed'];
 
 export function EditIssueForm({ issue, onClose, onSuccess }: EditIssueFormProps) {
   const terminalWidth = useBeadsStore(state => state.terminalWidth);
@@ -35,6 +35,9 @@ export function EditIssueForm({ issue, onClose, onSuccess }: EditIssueFormProps)
     assignee: issue.assignee || '',
     labels: issue.labels?.join(', ') || '',
   });
+  const statuses = EDITABLE_STATUSES.includes(issue.status)
+    ? EDITABLE_STATUSES
+    : [issue.status, ...EDITABLE_STATUSES];
   const [error, setError] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
 
@@ -141,21 +144,21 @@ export function EditIssueForm({ issue, onClose, onSuccess }: EditIssueFormProps)
 
     // Navigation for priority field
     if (currentField === 'priority') {
-      if (key.upArrow && formData.priority < 4) {
-        setFormData({ ...formData, priority: formData.priority + 1 });
-      } else if (key.downArrow && formData.priority > 0) {
+      if (key.upArrow && formData.priority > 0) {
         setFormData({ ...formData, priority: formData.priority - 1 });
+      } else if (key.downArrow && formData.priority < 4) {
+        setFormData({ ...formData, priority: formData.priority + 1 });
       }
       return;
     }
 
     // Navigation for status field
     if (currentField === 'status') {
-      const currentIndex = STATUSES.indexOf(formData.status);
+      const currentIndex = statuses.indexOf(formData.status);
       if (key.upArrow && currentIndex > 0) {
-        setFormData({ ...formData, status: STATUSES[currentIndex - 1] });
-      } else if (key.downArrow && currentIndex < STATUSES.length - 1) {
-        setFormData({ ...formData, status: STATUSES[currentIndex + 1] });
+        setFormData({ ...formData, status: statuses[currentIndex - 1] });
+      } else if (key.downArrow && currentIndex < statuses.length - 1) {
+        setFormData({ ...formData, status: statuses[currentIndex + 1] });
       }
       return;
     }

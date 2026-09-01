@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { Box, Text, useInput, useApp } from 'ink';
 import { useBeadsStore } from '../state/store';
 import { getTheme } from '../themes/themes';
-import { updateIssue } from '../bd/commands';
+import { closeIssue, updateIssue } from '../bd/commands';
 
 type CommandMode = 'command' | 'jump';
 
@@ -72,7 +72,6 @@ export function CommandBar() {
       // Help
       case 'h':
       case 'help':
-        toggleCommandBar();
         toggleHelp();
         return { success: true, message: '' };
 
@@ -121,7 +120,11 @@ export function CommandBar() {
         const newStatus = statusMap[statusArg];
         if (newStatus) {
           try {
-            await updateIssue(selectedIssue.id, { status: newStatus });
+            if (newStatus === 'closed') {
+              await closeIssue(selectedIssue.id);
+            } else {
+              await updateIssue(selectedIssue.id, { status: newStatus });
+            }
             if (reloadCallback) reloadCallback();
             return { success: true, message: `Status → ${newStatus}` };
           } catch (e) {
@@ -151,7 +154,6 @@ export function CommandBar() {
       // New issue
       case 'new':
       case 'create':
-        toggleCommandBar();
         navigateToCreateIssue();
         return { success: true, message: '' };
 
@@ -161,7 +163,6 @@ export function CommandBar() {
         if (!selectedIssue) {
           return { success: false, message: 'No issue selected' };
         }
-        toggleCommandBar();
         navigateToEditIssue();
         return { success: true, message: '' };
 

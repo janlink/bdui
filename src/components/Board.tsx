@@ -58,8 +58,8 @@ function KanbanView() {
   // Responsive layout calculations
   const COLUMN_WIDTH = LAYOUT.columnWidth;
   const DETAIL_PANEL_WIDTH = LAYOUT.detailPanelWidth;
-  const MIN_WIDTH_FOR_DETAIL = COLUMN_WIDTH * 4 + DETAIL_PANEL_WIDTH + 10;
-  const MIN_WIDTH_FOR_ALL_COLUMNS = COLUMN_WIDTH * 4 + 10;
+  const MIN_WIDTH_FOR_DETAIL = COLUMN_WIDTH * 5 + DETAIL_PANEL_WIDTH + 10;
+  const MIN_WIDTH_FOR_ALL_COLUMNS = COLUMN_WIDTH * 5 + 10;
 
   // Auto-hide detail panel on narrow screens
   const shouldShowDetails = showDetails && terminalWidth >= MIN_WIDTH_FOR_DETAIL;
@@ -69,17 +69,22 @@ function KanbanView() {
     ? 2
     : terminalWidth < COLUMN_WIDTH * 2
     ? 1
-    : 4;
+    : 5;
 
   const statusConfig = [
     { key: 'open', title: 'Open' },
     { key: 'in_progress', title: 'In Progress' },
     { key: 'blocked', title: 'Blocked' },
     { key: 'closed', title: 'Closed' },
+    { key: 'other', title: 'Other' },
   ] as const;
 
-  // Filter columns based on screen width
-  const columnsToShow = statusConfig.slice(0, visibleColumns);
+  // Keep the selected column in the responsive window.
+  const firstVisibleColumn = Math.min(
+    Math.max(0, selectedColumn - visibleColumns + 1),
+    statusConfig.length - visibleColumns,
+  );
+  const columnsToShow = statusConfig.slice(firstVisibleColumn, firstVisibleColumn + visibleColumns);
 
   return (
     <Box flexDirection="column" width={terminalWidth} height={terminalHeight}>
@@ -101,8 +106,9 @@ function KanbanView() {
           <Text color={theme.colors.textDim}>Open: <Text color={theme.colors.statusOpen}>{filteredStats.open}</Text></Text>
           <Text color={theme.colors.textDim}>Blocked: <Text color={theme.colors.statusBlocked}>{filteredStats.blocked}</Text></Text>
           <Text color={theme.colors.textDim}>Closed: <Text color={theme.colors.statusClosed}>{filteredStats.closed}</Text></Text>
-          {visibleColumns < 4 && (
-            <Text color={theme.colors.warning}>[{4 - visibleColumns} hidden]</Text>
+          <Text color={theme.colors.textDim}>Other: <Text color={theme.colors.text}>{visibleColumnsByStatus.other.length}</Text></Text>
+          {visibleColumns < 5 && (
+            <Text color={theme.colors.warning}>[{5 - visibleColumns} hidden]</Text>
           )}
         </Box>
       </Box>
@@ -127,7 +133,7 @@ function KanbanView() {
                 key={key}
                 title={title}
                 issues={visibleColumnsByStatus[key]}
-                isActive={selectedColumn === idx}
+                isActive={selectedColumn === firstVisibleColumn + idx}
                 selectedIndex={columnState.selectedIndex}
                 scrollOffset={columnState.scrollOffset}
                 itemsPerPage={itemsPerPage}
@@ -162,8 +168,8 @@ function KanbanView() {
       {showExportDialog && selectedIssue && (
         <Box
           position="absolute"
-          top={Math.floor(terminalHeight / 2) - 10}
-          left={Math.floor(terminalWidth / 2) - 35}
+          marginTop={Math.floor(terminalHeight / 2) - 10}
+          marginLeft={Math.floor(terminalWidth / 2) - 35}
         >
           <ExportDialog
             issue={selectedIssue}
@@ -176,8 +182,8 @@ function KanbanView() {
       {showThemeSelector && (
         <Box
           position="absolute"
-          top={Math.floor(terminalHeight / 2) - 10}
-          left={Math.floor(terminalWidth / 2) - 30}
+          marginTop={Math.floor(terminalHeight / 2) - 10}
+          marginLeft={Math.floor(terminalWidth / 2) - 30}
         >
           <ThemeSelector onClose={toggleThemeSelector} />
         </Box>
@@ -222,9 +228,11 @@ export function Board() {
         <Text color={theme.colors.textDim}>
           Current width: {terminalWidth} columns
         </Text>
-        <Text color={theme.colors.textDim} marginTop={1}>
-          Please resize your terminal window.
-        </Text>
+        <Box marginTop={1}>
+          <Text color={theme.colors.textDim}>
+            Please resize your terminal window.
+          </Text>
+        </Box>
       </Box>
     );
   }

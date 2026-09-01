@@ -23,10 +23,11 @@ export function StatsView({ issues, totalIssues, terminalWidth, terminalHeight }
 
   const stats = useMemo(() => {
     const statusCounts = {
-      open: issues.filter(i => i.status === 'open').length,
-      in_progress: issues.filter(i => i.status === 'in_progress').length,
-      blocked: issues.filter(i => i.status === 'blocked').length,
-      closed: issues.filter(i => i.status === 'closed').length,
+      open: issues.filter(i => i.displayStatus === 'open').length,
+      in_progress: issues.filter(i => i.displayStatus === 'in_progress').length,
+      blocked: issues.filter(i => i.displayStatus === 'blocked').length,
+      closed: issues.filter(i => i.displayStatus === 'closed').length,
+      other: issues.filter(i => i.displayStatus === 'other').length,
     };
 
     const priorityCounts = {
@@ -43,6 +44,8 @@ export function StatsView({ issues, totalIssues, terminalWidth, terminalHeight }
       bug: issues.filter(i => i.issue_type === 'bug').length,
       feature: issues.filter(i => i.issue_type === 'feature').length,
       chore: issues.filter(i => i.issue_type === 'chore').length,
+      decision: issues.filter(i => i.issue_type === 'decision').length,
+      other: issues.filter(i => !['task', 'epic', 'bug', 'feature', 'chore', 'decision'].includes(i.issue_type)).length,
     };
 
     const assignees = new Map<string, number>();
@@ -134,6 +137,10 @@ export function StatsView({ issues, totalIssues, terminalWidth, terminalHeight }
           <Text color={theme.colors.statusClosed}>●</Text>
           <Text>{stats.statusCounts.closed} closed</Text>
         </Box>
+        <Box gap={1}>
+          <Text color={theme.colors.textDim}>●</Text>
+          <Text>{stats.statusCounts.other} other</Text>
+        </Box>
         <Text color={theme.colors.textDim}>│</Text>
         <Text color={theme.colors.success}>{stats.completionRate}% done</Text>
       </Box>
@@ -150,6 +157,7 @@ export function StatsView({ issues, totalIssues, terminalWidth, terminalHeight }
               {renderBar('In Progress', stats.statusCounts.in_progress, issues.length, theme.colors.statusInProgress)}
               {renderBar('Blocked', stats.statusCounts.blocked, issues.length, theme.colors.statusBlocked)}
               {renderBar('Closed', stats.statusCounts.closed, issues.length, theme.colors.statusClosed)}
+              {renderBar('Other', stats.statusCounts.other, issues.length, theme.colors.textDim)}
             </Box>
           </Box>
 
@@ -157,11 +165,11 @@ export function StatsView({ issues, totalIssues, terminalWidth, terminalHeight }
           <Box flexDirection="column" borderStyle="round" borderColor={theme.colors.border} paddingX={1}>
             <Text bold color={theme.colors.primary}>Priority</Text>
             <Box flexDirection="column">
-              {renderBar('P4 Critical', stats.priorityCounts.p4, issues.length, theme.colors.priorityCritical)}
-              {renderBar('P3 High', stats.priorityCounts.p3, issues.length, theme.colors.priorityHigh)}
+              {renderBar('P0 Critical', stats.priorityCounts.p0, issues.length, theme.colors.priorityCritical)}
+              {renderBar('P1 High', stats.priorityCounts.p1, issues.length, theme.colors.priorityHigh)}
               {renderBar('P2 Medium', stats.priorityCounts.p2, issues.length, theme.colors.priorityMedium)}
-              {renderBar('P1 Low', stats.priorityCounts.p1, issues.length, theme.colors.priorityLow)}
-              {renderBar('P0 Lowest', stats.priorityCounts.p0, issues.length, theme.colors.priorityLowest)}
+              {renderBar('P3 Low', stats.priorityCounts.p3, issues.length, theme.colors.priorityLow)}
+              {renderBar('P4 Backlog', stats.priorityCounts.p4, issues.length, theme.colors.priorityLowest)}
             </Box>
           </Box>
 
@@ -174,6 +182,8 @@ export function StatsView({ issues, totalIssues, terminalWidth, terminalHeight }
               {stats.typeCounts.bug > 0 && renderBar('Bug', stats.typeCounts.bug, issues.length, theme.colors.typeBug)}
               {stats.typeCounts.task > 0 && renderBar('Task', stats.typeCounts.task, issues.length, theme.colors.typeTask)}
               {stats.typeCounts.chore > 0 && renderBar('Chore', stats.typeCounts.chore, issues.length, theme.colors.typeChore)}
+              {stats.typeCounts.decision > 0 && renderBar('Decision', stats.typeCounts.decision, issues.length, theme.colors.accent)}
+              {stats.typeCounts.other > 0 && renderBar('Other', stats.typeCounts.other, issues.length, theme.colors.textDim)}
             </Box>
           </Box>
         </Box>

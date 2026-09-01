@@ -81,6 +81,7 @@ export function StatusColumn({
                 {statusKey === 'in_progress' && 'Move issues here with e (edit)'}
                 {statusKey === 'blocked' && 'Issues blocked by others appear here'}
                 {statusKey === 'closed' && 'Completed issues appear here'}
+                {statusKey === 'other' && 'Deferred, pinned, hooked, and custom statuses appear here'}
               </Text>
             </Box>
           </Box>

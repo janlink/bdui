@@ -33,8 +33,8 @@ export function ConfirmDialog() {
   return (
     <Box
       position="absolute"
-      top={Math.floor(terminalHeight / 2) - 4}
-      left={Math.floor(terminalWidth / 2) - 25}
+      marginTop={Math.floor(terminalHeight / 2) - 4}
+      marginLeft={Math.floor(terminalWidth / 2) - 25}
       flexDirection="column"
       borderStyle="double"
       borderColor={theme.colors.warning}

@@ -46,6 +46,10 @@ export function IssueCard({ issue, isSelected = false }: IssueCardProps) {
         <Text color={theme.colors.textDim}>({priorityLabel.toLowerCase()})</Text>
       </Box>
 
+      {issue.displayStatus === 'other' && (
+        <Text color={theme.colors.textDim}>Status: {issue.status}</Text>
+      )}
+
       {issue.assignee && (
         <Box gap={1}>
           <Text color={theme.colors.textDim}>@</Text>

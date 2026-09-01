@@ -73,7 +73,7 @@ test('normalizeBeads preserves future values and derives dependency relationship
   expect(child.blockedBy).toEqual(['blocker']);
   expect(data.byId.get('parent')?.children).toEqual(['child']);
   expect(data.byId.get('blocker')?.blocks).toEqual(['child', 'blocked-child']);
-  expect(data.byStatus.hooked).toEqual([child]);
+  expect(data.byStatus.other).toEqual([child]);
   expect(data.byId.get('blocked-child')).toEqual(expect.objectContaining({
     status: 'open',
     displayStatus: 'blocked',

@@ -12,7 +12,8 @@ interface CreateIssueFormProps {
 
 type FormField = 'title' | 'priority' | 'type' | 'description' | 'assignee' | 'labels';
 
-const ISSUE_TYPES: Array<'task' | 'epic' | 'bug' | 'feature' | 'chore'> = ['task', 'epic', 'bug', 'feature', 'chore'];
+type CreatableIssueType = 'task' | 'epic' | 'bug' | 'feature' | 'chore' | 'decision';
+const ISSUE_TYPES: CreatableIssueType[] = ['task', 'epic', 'bug', 'feature', 'chore', 'decision'];
 
 export function CreateIssueForm({ onClose, onSuccess }: CreateIssueFormProps) {
   const terminalWidth = useBeadsStore(state => state.terminalWidth);
@@ -28,7 +29,7 @@ export function CreateIssueForm({ onClose, onSuccess }: CreateIssueFormProps) {
     title: '',
     description: '',
     priority: 2,
-    issueType: 'task' as 'task' | 'epic' | 'bug' | 'feature' | 'chore',
+    issueType: 'task' as CreatableIssueType,
     assignee: '',
     labels: '',
   });
@@ -116,10 +117,10 @@ export function CreateIssueForm({ onClose, onSuccess }: CreateIssueFormProps) {
 
     // Navigation for priority field
     if (currentField === 'priority') {
-      if (key.upArrow && formData.priority < 4) {
-        setFormData({ ...formData, priority: formData.priority + 1 });
-      } else if (key.downArrow && formData.priority > 0) {
+      if (key.upArrow && formData.priority > 0) {
         setFormData({ ...formData, priority: formData.priority - 1 });
+      } else if (key.downArrow && formData.priority < 4) {
+        setFormData({ ...formData, priority: formData.priority + 1 });
       }
       return;
     }

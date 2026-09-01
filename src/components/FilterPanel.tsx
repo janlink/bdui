@@ -1,6 +1,7 @@
 import React, { useState, useMemo } from 'react';
 import { Box, Text, useInput } from 'ink';
 import { useBeadsStore } from '../state/store';
+import { PRIORITY_LABELS } from '../utils/constants';
 
 export function FilterPanel() {
   const data = useBeadsStore(state => state.data);
@@ -30,7 +31,7 @@ export function FilterPanel() {
   }, [data.issues]);
 
   const priorities = [0, 1, 2, 3, 4];
-  const statuses = ['open', 'in_progress', 'blocked', 'closed'];
+  const statuses = ['open', 'in_progress', 'blocked', 'closed', 'other'];
 
   // Get current filter options based on selected type
   const getCurrentOptions = () => {
@@ -135,10 +136,7 @@ export function FilterPanel() {
     }
   };
 
-  const getPriorityLabel = (priority: number) => {
-    const labels = ['P0 (Lowest)', 'P1 (Low)', 'P2 (Medium)', 'P3 (High)', 'P4 (Critical)'];
-    return labels[priority];
-  };
+  const getPriorityLabel = (priority: number) => `P${priority} (${PRIORITY_LABELS[priority]})`;
 
   return (
     <Box

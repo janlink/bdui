@@ -3,7 +3,7 @@ import type { BeadsData, Issue } from '../types';
 import { detectStatusChanges, notifyStatusChange } from '../utils/notifications';
 import { LAYOUT } from '../utils/constants';
 
-type StatusKey = 'open' | 'closed' | 'in_progress' | 'blocked';
+type StatusKey = 'open' | 'closed' | 'in_progress' | 'blocked' | 'other';
 type VisibleColumns = Record<StatusKey, Issue[]>;
 
 interface ColumnState {
@@ -37,7 +37,7 @@ interface BeadsStore {
   terminalHeight: number;
 
   // Navigation - per column
-  selectedColumn: number; // 0-3 for open/in_progress/blocked/closed
+  selectedColumn: number; // open/in_progress/blocked/closed/other
   columnStates: Record<StatusKey, ColumnState>; // Independent pagination per column
   itemsPerPage: number;
 
@@ -126,7 +126,7 @@ interface BeadsStore {
   clearUndoHistory: () => void;
 }
 
-const STATUS_KEYS: StatusKey[] = ['open', 'in_progress', 'blocked', 'closed'];
+const STATUS_KEYS: StatusKey[] = ['open', 'in_progress', 'blocked', 'closed', 'other'];
 
 function filterIssues(data: BeadsData, filter: BeadsStore['filter'], searchQuery: string): Issue[] {
   let issues = data.issues;
@@ -150,9 +150,10 @@ function filterIssues(data: BeadsData, filter: BeadsStore['filter'], searchQuery
 }
 
 function groupVisibleIssues(issues: Issue[]): VisibleColumns {
-  const columns: VisibleColumns = { open: [], in_progress: [], blocked: [], closed: [] };
+  const columns: VisibleColumns = { open: [], in_progress: [], blocked: [], closed: [], other: [] };
   for (const issue of issues) {
-    if (issue.displayStatus in columns) columns[issue.displayStatus as StatusKey].push(issue);
+    const statusKey = issue.displayStatus in columns ? issue.displayStatus as StatusKey : 'other';
+    columns[statusKey].push(issue);
   }
   return columns;
 }
@@ -163,6 +164,7 @@ function resetColumnStates(): Record<StatusKey, ColumnState> {
     in_progress: { selectedIndex: 0, scrollOffset: 0 },
     blocked: { selectedIndex: 0, scrollOffset: 0 },
     closed: { selectedIndex: 0, scrollOffset: 0 },
+    other: { selectedIndex: 0, scrollOffset: 0 },
   };
 }
 
@@ -174,6 +176,7 @@ export const useBeadsStore = create<BeadsStore>((set, get) => ({
       'closed': [],
       'in_progress': [],
       'blocked': [],
+      'other': [],
     },
     byId: new Map(),
     stats: {
@@ -299,21 +302,25 @@ export const useBeadsStore = create<BeadsStore>((set, get) => ({
     const searchId = id.toLowerCase();
 
     // ID lookup remains global. Clear active filters so the selected issue is also visible.
-    for (let colIndex = 0; colIndex < STATUS_KEYS.length; colIndex++) {
-      const statusKey = STATUS_KEYS[colIndex];
-      const issues = data.byStatus[statusKey] || [];
-      const issueIndex = issues.findIndex(issue =>
-        issue.id.toLowerCase() === searchId || issue.id.toLowerCase().includes(searchId)
-      );
+    const columns = groupVisibleIssues(data.issues);
+    for (const exact of [true, false]) {
+      for (let colIndex = 0; colIndex < STATUS_KEYS.length; colIndex++) {
+        const statusKey = STATUS_KEYS[colIndex];
+        const issues = columns[statusKey];
+        const issueIndex = issues.findIndex(issue => {
+          const issueId = issue.id.toLowerCase();
+          return exact ? issueId === searchId : issueId.includes(searchId);
+        });
 
-      if (issueIndex !== -1) {
-        const columnStates = resetColumnStates();
-        columnStates[statusKey] = {
-          selectedIndex: issueIndex,
-          scrollOffset: Math.floor(issueIndex / itemsPerPage) * itemsPerPage,
-        };
-        set({ selectedColumn: colIndex, columnStates, searchQuery: '', filter: {} });
-        return true;
+        if (issueIndex !== -1) {
+          const columnStates = resetColumnStates();
+          columnStates[statusKey] = {
+            selectedIndex: issueIndex,
+            scrollOffset: Math.floor(issueIndex / itemsPerPage) * itemsPerPage,
+          };
+          set({ selectedColumn: colIndex, columnStates, searchQuery: '', filter: {} });
+          return true;
+        }
       }
     }
     return false;

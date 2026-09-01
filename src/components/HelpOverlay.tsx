@@ -74,7 +74,7 @@ export function HelpOverlay() {
           <Text>  <Text color={theme.colors.primary}>:5</Text>              Jump to page 5</Text>
           <Text>  <Text color={theme.colors.primary}>:issue-id</Text>       Jump to issue by ID</Text>
           <Text>  <Text color={theme.colors.primary}>:s o/i/b/c</Text>      Set status</Text>
-          <Text>  <Text color={theme.colors.primary}>:p 0-4</Text>          Set priority</Text>
+          <Text>  <Text color={theme.colors.primary}>:p 0-4</Text>          Set priority (P0 Critical → P4 Backlog)</Text>
           <Text>  <Text color={theme.colors.primary}>:kanban/tree/graph/stats</Text>  Switch view</Text>
           <Text>  <Text color={theme.colors.primary}>:theme name</Text>     Change theme</Text>
           <Text>  <Text color={theme.colors.primary}>:new :edit :q</Text>   Create, edit, quit</Text>

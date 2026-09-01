@@ -4,7 +4,7 @@ export interface CreateIssueParams {
   title: string;
   description?: string;
   priority?: number;
-  issueType?: 'task' | 'epic' | 'bug' | 'feature' | 'chore';
+  issueType?: 'task' | 'epic' | 'bug' | 'feature' | 'chore' | 'decision';
   assignee?: string;
   labels?: string[];
   parent?: string;

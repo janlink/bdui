@@ -20,6 +20,7 @@ beforeEach(() => {
       in_progress: { selectedIndex: 0, scrollOffset: 0 },
       blocked: { selectedIndex: 0, scrollOffset: 0 },
       closed: { selectedIndex: 0, scrollOffset: 0 },
+      other: { selectedIndex: 0, scrollOffset: 0 },
     },
     itemsPerPage: 1,
     searchQuery: '',
@@ -66,6 +67,39 @@ test('navigation and pagination cannot exceed the filtered column', () => {
   expect(current.columnStates.open).toEqual({ selectedIndex: 0, scrollOffset: 0 });
   expect(current.getSelectedIssue()?.id).toBe('issue-visible');
   expect(current.getTotalPages()).toBe(1);
+});
+
+test('unknown statuses remain visible and navigable in Other', () => {
+  const store = useBeadsStore.getState();
+  store.setData(normalizeBeads([
+    { id: 'deferred-one', title: 'Later', status: 'deferred', issue_type: 'decision', priority: 4 },
+    { id: 'custom-one', title: 'Custom', status: 'awaiting_review', issue_type: 'custom', priority: 0 },
+  ]));
+
+  expect(useBeadsStore.getState().getVisibleColumns().other.map(issue => issue.status)).toEqual([
+    'deferred',
+    'awaiting_review',
+  ]);
+
+  useBeadsStore.getState().setFilter({ status: 'other' });
+  for (let column = 0; column < 4; column++) useBeadsStore.getState().moveRight();
+  useBeadsStore.getState().moveDown();
+
+  const other = useBeadsStore.getState();
+  expect(other.selectedColumn).toBe(4);
+  expect(other.getCurrentPage()).toBe(2);
+  expect(other.getSelectedIssue()?.status).toBe('awaiting_review');
+});
+
+test('exact ID selection wins over an earlier fuzzy match', () => {
+  const store = useBeadsStore.getState();
+  store.setData(normalizeBeads([
+    { id: 'bd-a.1', title: 'Child', status: 'open', issue_type: 'task', priority: 2 },
+    { id: 'bd-a', title: 'Exact parent', status: 'closed', issue_type: 'epic', priority: 1 },
+  ]));
+
+  expect(useBeadsStore.getState().selectIssueById('bd-a')).toBe(true);
+  expect(useBeadsStore.getState().getSelectedIssue()?.id).toBe('bd-a');
 });
 
 test('global ID selection clears filters so the selected issue remains visible', () => {

@@ -14,8 +14,6 @@ export function App() {
   const setReloadCallback = useBeadsStore(state => state.setReloadCallback);
   const currentTheme = useBeadsStore(state => state.currentTheme);
   const theme = getTheme(currentTheme);
-  const [beadsPath, setBeadsPath] = useState<string | null>(null);
-  const [watcher, setWatcher] = useState<BeadsWatcher | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
 
@@ -39,9 +37,14 @@ export function App() {
 
   // Find and load .beads/ directory on mount
   useEffect(() => {
+    let disposed = false;
+    let activeWatcher: BeadsWatcher | null = null;
+    let unsubscribe: (() => void) | null = null;
+
     async function init() {
       try {
         const path = await findBeadsDir();
+        if (disposed) return;
 
         if (!path) {
           setError('No .beads/ directory found in current or parent directories');
@@ -49,41 +52,41 @@ export function App() {
           return;
         }
 
-        setBeadsPath(path);
-
         // Load initial data
         const data = await loadBeads(path);
+        if (disposed) return;
         setData(data);
 
         // Set up watcher
         const watcher = new BeadsWatcher(path);
-        watcher.subscribe((data) => {
-          setData(data);
+        activeWatcher = watcher;
+        unsubscribe = watcher.subscribe((data) => {
+          if (!disposed) setData(data);
         });
         watcher.start();
-        setWatcher(watcher);
 
         // Set reload callback in store
         setReloadCallback(() => {
-          watcher.reload();
+          if (!disposed) void watcher.reload();
         });
 
         setLoading(false);
       } catch (err) {
+        if (disposed) return;
         setError(err instanceof Error ? err.message : 'Unknown error');
         setLoading(false);
       }
     }
 
-    init();
+    void init();
 
-    // Cleanup
     return () => {
-      if (watcher) {
-        watcher.stop();
-      }
+      disposed = true;
+      unsubscribe?.();
+      activeWatcher?.stop();
+      setReloadCallback(null);
     };
-  }, []);
+  }, [setData, setReloadCallback]);
 
   // Keyboard navigation
   const moveUp = useBeadsStore(state => state.moveUp);
@@ -154,8 +157,8 @@ export function App() {
 
     // Refresh
     if (input === 'r') {
-      if (watcher) {
-        watcher.reload();
+      if (reloadCallback) {
+        reloadCallback();
         showToast('Data refreshed', 'info');
       }
     }
@@ -289,9 +292,11 @@ export function App() {
       <Box flexDirection="column" padding={1}>
         <Text color={theme.colors.error} bold>Error:</Text>
         <Text color={theme.colors.error}>{error}</Text>
-        <Text color={theme.colors.textDim} marginTop={1}>
-          Make sure you're in a directory with a .beads/ folder
-        </Text>
+        <Box marginTop={1}>
+          <Text color={theme.colors.textDim}>
+            Make sure you're in a directory with a .beads/ folder
+          </Text>
+        </Box>
       </Box>
     );
   }

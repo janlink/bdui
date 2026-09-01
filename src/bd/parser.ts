@@ -102,7 +102,10 @@ export function normalizeBeads(value: unknown): BeadsData {
       });
     }
 
-    const displayStatus = issue.status === 'open' && issue.blockedBy?.length ? 'blocked' : issue.status;
+    const effectiveStatus = issue.status === 'open' && issue.blockedBy?.length ? 'blocked' : issue.status;
+    const displayStatus = KNOWN_STATUSES.includes(effectiveStatus as typeof KNOWN_STATUSES[number])
+      ? effectiveStatus
+      : 'other';
     issue.displayStatus = displayStatus;
     (byStatus[displayStatus] ??= []).push(issue);
 

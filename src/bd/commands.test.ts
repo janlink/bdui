@@ -56,7 +56,7 @@ test('mutations pass user values as argv and use current create, update, and clo
       title,
       description: 'spaces and $(commands) stay literal',
       priority: 1,
-      issueType: 'task',
+      issueType: 'decision',
       labels: ['adapter-test'],
     });
     await updateIssue({ id, title: 'Updated | still literal', description: 'new value; echo nope', priority: 2 });
@@ -67,6 +67,7 @@ test('mutations pass user values as argv and use current create, update, and clo
       description: 'new value; echo nope',
       priority: 2,
       status: 'open',
+      issue_type: 'decision',
     }));
     await expect(access(marker)).rejects.toThrow();
 
