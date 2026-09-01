@@ -18,9 +18,8 @@ import { Toast } from './Toast';
 import { FiltersBanner } from './FiltersBanner';
 import { ConfirmDialog } from './ConfirmDialog';
 import { CommandBar } from './CommandBar';
-import { LAYOUT, hasActiveFilters } from '../utils/constants';
+import { LAYOUT } from '../utils/constants';
 import { Footer } from './Footer';
-import type { Issue } from '../types';
 
 function KanbanView() {
   const data = useBeadsStore(state => state.data);
@@ -38,50 +37,23 @@ function KanbanView() {
   const terminalWidth = useBeadsStore(state => state.terminalWidth);
   const terminalHeight = useBeadsStore(state => state.terminalHeight);
   const getSelectedIssue = useBeadsStore(state => state.getSelectedIssue);
-  const getFilteredIssues = useBeadsStore(state => state.getFilteredIssues);
+  const getVisibleColumns = useBeadsStore(state => state.getVisibleColumns);
   const searchQuery = useBeadsStore(state => state.searchQuery);
   const filter = useBeadsStore(state => state.filter);
-  const viewMode = useBeadsStore(state => state.viewMode);
   const currentTheme = useBeadsStore(state => state.currentTheme);
   const theme = getTheme(currentTheme);
 
   const selectedIssue = getSelectedIssue();
-  const filtersActive = hasActiveFilters(filter, searchQuery);
-
-  // Apply filtering - rebuild byStatus from filtered issues
-  const filteredData = useMemo(() => {
-    if (!filtersActive) {
-      return data;
-    }
-
-    const filteredIssues = getFilteredIssues();
-
-    // Rebuild byStatus structure
-    const byStatus: Record<string, Issue[]> = {
-      'open': [],
-      'closed': [],
-      'in_progress': [],
-      'blocked': [],
-    };
-
-    filteredIssues.forEach(issue => {
-      if (byStatus[issue.status]) {
-        byStatus[issue.status].push(issue);
-      }
-    });
-
-    return {
-      ...data,
-      byStatus,
-      issues: filteredIssues,
-      stats: {
-        total: filteredIssues.length,
-        open: byStatus.open.length,
-        closed: byStatus.closed.length,
-        blocked: byStatus.blocked.length,
-      },
-    };
-  }, [data, searchQuery, filter, getFilteredIssues, filtersActive]);
+  const visibleColumnsByStatus = useMemo(
+    () => getVisibleColumns(),
+    [data, searchQuery, filter, getVisibleColumns],
+  );
+  const filteredStats = {
+    total: Object.values(visibleColumnsByStatus).reduce((total, issues) => total + issues.length, 0),
+    open: visibleColumnsByStatus.open.length,
+    closed: visibleColumnsByStatus.closed.length,
+    blocked: visibleColumnsByStatus.blocked.length,
+  };
 
   // Responsive layout calculations
   const COLUMN_WIDTH = LAYOUT.columnWidth;
@@ -125,10 +97,10 @@ function KanbanView() {
           </Text>
         </Box>
         <Box gap={2}>
-          <Text color={theme.colors.textDim}>Total: <Text color={theme.colors.text}>{filteredData.stats.total}</Text></Text>
-          <Text color={theme.colors.textDim}>Open: <Text color={theme.colors.statusOpen}>{filteredData.stats.open}</Text></Text>
-          <Text color={theme.colors.textDim}>Blocked: <Text color={theme.colors.statusBlocked}>{filteredData.stats.blocked}</Text></Text>
-          <Text color={theme.colors.textDim}>Closed: <Text color={theme.colors.statusClosed}>{filteredData.stats.closed}</Text></Text>
+          <Text color={theme.colors.textDim}>Total: <Text color={theme.colors.text}>{filteredStats.total}</Text></Text>
+          <Text color={theme.colors.textDim}>Open: <Text color={theme.colors.statusOpen}>{filteredStats.open}</Text></Text>
+          <Text color={theme.colors.textDim}>Blocked: <Text color={theme.colors.statusBlocked}>{filteredStats.blocked}</Text></Text>
+          <Text color={theme.colors.textDim}>Closed: <Text color={theme.colors.statusClosed}>{filteredStats.closed}</Text></Text>
           {visibleColumns < 4 && (
             <Text color={theme.colors.warning}>[{4 - visibleColumns} hidden]</Text>
           )}
@@ -154,7 +126,7 @@ function KanbanView() {
               <StatusColumn
                 key={key}
                 title={title}
-                issues={filteredData.byStatus[key] || []}
+                issues={visibleColumnsByStatus[key]}
                 isActive={selectedColumn === idx}
                 selectedIndex={columnState.selectedIndex}
                 scrollOffset={columnState.scrollOffset}
@@ -234,12 +206,10 @@ export function Board() {
 
   const selectedIssue = getSelectedIssue();
 
-  // Get filtered issues for stats view
-  const filteredIssues = useMemo(() => {
-    const filtersActive = hasActiveFilters(filter, searchQuery);
-    if (!filtersActive) return data.issues;
-    return getFilteredIssues();
-  }, [data, filter, searchQuery, getFilteredIssues]);
+  const filteredIssues = useMemo(
+    () => getFilteredIssues(),
+    [data, searchQuery, filter, getFilteredIssues],
+  );
 
   // Check minimum terminal width
   if (terminalWidth < LAYOUT.minTerminalWidth) {

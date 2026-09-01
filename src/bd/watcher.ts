@@ -1,100 +1,122 @@
-import { watch, type FSWatcher } from 'fs';
-import { join } from 'path';
-import type { BeadsData } from '../types';
+import type { BeadsData, Issue } from '../types';
 import { loadBeads } from './parser';
 
 export type UpdateCallback = (data: BeadsData) => void;
 
-/**
- * Watch beads.db for changes and trigger callbacks
- */
-export class BeadsWatcher {
-  private watcher: FSWatcher | null = null;
-  private callbacks: Set<UpdateCallback> = new Set();
-  private beadsPath: string;
-  private debounceTimeout: Timer | null = null;
+export interface BeadsWatcherOptions {
+  intervalMs?: number;
+  load?: (beadsPath: string) => Promise<BeadsData>;
+  onError?: (error: unknown) => void;
+}
 
-  constructor(beadsPath: string) {
-    this.beadsPath = beadsPath;
-  }
-
-  /**
-   * Start watching the beads.db file
-   */
-  start() {
-    if (this.watcher) return;
-
-    const dbPath = join(this.beadsPath, 'beads.db');
-
-    this.watcher = watch(
-      dbPath,
-      { recursive: false },
-      (eventType, filename) => {
-        this.handleChange();
-      }
+function canonicalize(value: unknown): unknown {
+  if (Array.isArray(value)) return value.map(canonicalize);
+  if (value && typeof value === 'object') {
+    return Object.fromEntries(
+      Object.entries(value as Record<string, unknown>)
+        .sort(([left], [right]) => left.localeCompare(right))
+        .map(([key, item]) => [key, canonicalize(item)]),
     );
   }
+  return value;
+}
 
-  /**
-   * Stop watching
-   */
-  stop() {
-    if (this.watcher) {
-      this.watcher.close();
-      this.watcher = null;
-    }
+function issueSnapshot(issue: Issue): Record<string, unknown> {
+  return {
+    ...issue,
+    labels: [...(issue.labels ?? [])].sort(),
+    dependencies: [...issue.dependencies]
+      .map((edge) => canonicalize(edge))
+      .sort((left, right) => JSON.stringify(left).localeCompare(JSON.stringify(right))),
+    children: issue.children ? [...issue.children].sort() : undefined,
+    blockedBy: issue.blockedBy ? [...issue.blockedBy].sort() : undefined,
+    blocks: issue.blocks ? [...issue.blocks].sort() : undefined,
+  };
+}
 
-    if (this.debounceTimeout) {
-      clearTimeout(this.debounceTimeout);
-      this.debounceTimeout = null;
-    }
+export function beadsFingerprint(data: BeadsData): string {
+  return JSON.stringify(data.issues.map(issueSnapshot).sort((left, right) =>
+    String(left.id).localeCompare(String(right.id)),
+  ));
+}
+
+/** Poll bd serially and publish only changed, successful snapshots. */
+export class BeadsWatcher {
+  private readonly callbacks = new Set<UpdateCallback>();
+  private readonly intervalMs: number;
+  private readonly load: (beadsPath: string) => Promise<BeadsData>;
+  private readonly onError: (error: unknown) => void;
+  private interval: ReturnType<typeof setInterval> | null = null;
+  private inFlight: Promise<void> | null = null;
+  private pending = false;
+  private generation = 0;
+  private lastFingerprint: string | null = null;
+  private lastGoodData: BeadsData | null = null;
+
+  constructor(private readonly beadsPath: string, options: BeadsWatcherOptions = {}) {
+    this.intervalMs = options.intervalMs ?? 1_000;
+    this.load = options.load ?? loadBeads;
+    this.onError = options.onError ?? ((error) => console.error('Error polling beads:', error));
   }
 
-  /**
-   * Subscribe to bead updates
-   */
+  start(): void {
+    if (this.interval) return;
+    this.interval = setInterval(() => void this.reload(), this.intervalMs);
+  }
+
+  stop(): void {
+    if (this.interval) clearInterval(this.interval);
+    this.interval = null;
+    this.pending = false;
+    this.generation++;
+  }
+
   subscribe(callback: UpdateCallback): () => void {
     this.callbacks.add(callback);
-
-    // Return unsubscribe function
-    return () => {
-      this.callbacks.delete(callback);
-    };
+    return () => this.callbacks.delete(callback);
   }
 
-  /**
-   * Handle file system changes with debouncing
-   */
-  private handleChange() {
-    // Debounce rapid file changes
-    if (this.debounceTimeout) {
-      clearTimeout(this.debounceTimeout);
+  /** Queue one reload. Concurrent requests collapse into the same serial drain. */
+  reload(): Promise<void> {
+    this.pending = true;
+    if (!this.inFlight) {
+      this.inFlight = this.drain().finally(() => {
+        this.inFlight = null;
+      });
     }
-
-    this.debounceTimeout = setTimeout(async () => {
-      const data = await loadBeads(this.beadsPath);
-      this.notifySubscribers(data);
-    }, 100);
+    return this.inFlight;
   }
 
-  /**
-   * Notify all subscribers of updates
-   */
-  private notifySubscribers(data: BeadsData) {
+  getLastGoodData(): BeadsData | null {
+    return this.lastGoodData;
+  }
+
+  private async drain(): Promise<void> {
+    while (this.pending) {
+      this.pending = false;
+      const generation = this.generation;
+      try {
+        const data = await this.load(this.beadsPath);
+        if (generation !== this.generation) continue;
+        const fingerprint = beadsFingerprint(data);
+        this.lastGoodData = data;
+        if (fingerprint !== this.lastFingerprint) {
+          this.lastFingerprint = fingerprint;
+          this.notifySubscribers(data);
+        }
+      } catch (error) {
+        this.onError(error);
+      }
+    }
+  }
+
+  private notifySubscribers(data: BeadsData): void {
     for (const callback of this.callbacks) {
       try {
         callback(data);
       } catch (error) {
-        console.error('Error in watcher callback:', error);
+        this.onError(error);
       }
     }
-  }
-
-  /**
-   * Manually trigger a reload
-   */
-  async reload() {
-    const data = await loadBeads(this.beadsPath);
-    this.notifySubscribers(data);
   }
 }

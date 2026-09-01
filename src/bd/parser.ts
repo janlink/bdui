@@ -1,171 +1,135 @@
-import { Database } from 'bun:sqlite';
-import { stat } from 'fs/promises';
-import { join } from 'path';
-import type { Issue, BeadsData } from '../types';
+import { stat } from 'node:fs/promises';
+import { resolve } from 'node:path';
+import type { BeadsData, DependencyEdge, Issue } from '../types';
+import { readBdJson, workspaceForBeadsPath } from './client';
 
-/**
- * Read all issues from bd SQLite database
- */
-export async function loadBeads(beadsPath: string = '.beads'): Promise<BeadsData> {
-  const dbPath = join(beadsPath, 'beads.db');
+const KNOWN_STATUSES = ['open', 'closed', 'in_progress', 'blocked'] as const;
 
-  try {
-    // Verify file exists first
-    try {
-      await stat(dbPath);
-    } catch {
-      throw new Error(`Database not found at ${dbPath}`);
-    }
+type JsonObject = Record<string, unknown>;
 
-    // Open database - remove readonly flag as WAL mode needs write access
-    const db = new Database(dbPath);
+function isObject(value: unknown): value is JsonObject {
+  return typeof value === 'object' && value !== null && !Array.isArray(value);
+}
 
-    // Load all issues
-    const issues: Issue[] = db.query(`
-      SELECT
-        id,
-        title,
-        description,
-        status,
-        priority,
-        issue_type,
-        assignee,
-        created_at,
-        updated_at,
-        closed_at
-      FROM issues
-      ORDER BY priority DESC, created_at DESC
-    `).all() as Issue[];
+function stringValue(value: unknown, fallback = ''): string {
+  return typeof value === 'string' ? value : fallback;
+}
 
-    // Load labels for each issue
-    const labelsMap = new Map<string, string[]>();
-    const labelsRows = db.query('SELECT issue_id, label FROM labels').all() as Array<{issue_id: string, label: string}>;
+function optionalString(value: unknown): string | null | undefined {
+  return typeof value === 'string' || value === null ? value : undefined;
+}
 
-    for (const row of labelsRows) {
-      if (!labelsMap.has(row.issue_id)) {
-        labelsMap.set(row.issue_id, []);
-      }
-      labelsMap.get(row.issue_id)!.push(row.label);
-    }
+function dependencyEdges(value: unknown): DependencyEdge[] {
+  if (!Array.isArray(value)) return [];
 
-    // Load dependencies
-    const dependencies = db.query(`
-      SELECT issue_id, depends_on_id, type
-      FROM dependencies
-    `).all() as Array<{issue_id: string, depends_on_id: string, type: string}>;
+  return value.filter(isObject).map((edge) => ({
+    ...edge,
+    issue_id: stringValue(edge.issue_id),
+    depends_on_id: stringValue(edge.depends_on_id),
+    type: stringValue(edge.type),
+  }));
+}
 
-    const byId = new Map<string, Issue>();
+function stringArray(value: unknown): string[] {
+  return Array.isArray(value) ? value.filter((item): item is string => typeof item === 'string') : [];
+}
 
-    // Attach labels to issues
-    for (const issue of issues) {
-      issue.labels = labelsMap.get(issue.id) || [];
-      byId.set(issue.id, issue);
-    }
+function normalizeIssue(value: JsonObject): Issue | null {
+  const id = stringValue(value.id);
+  if (!id) return null;
 
-    // Build dependency relationships
-    for (const dep of dependencies) {
-      const issue = byId.get(dep.issue_id);
-      if (!issue) continue;
+  const priority = typeof value.priority === 'number'
+    ? value.priority
+    : Number.parseInt(stringValue(value.priority, '2'), 10);
 
-      if (dep.type === 'parent-child') {
-        // depends_on_id is the parent
-        issue.parent = dep.depends_on_id;
+  const status = stringValue(value.status, 'open');
 
-        // Add to parent's children
-        const parent = byId.get(dep.depends_on_id);
-        if (parent) {
-          if (!parent.children) parent.children = [];
-          parent.children.push(dep.issue_id);
-        }
-      } else if (dep.type === 'blocks') {
-        // This issue is blocked by depends_on_id
-        if (!issue.blockedBy) issue.blockedBy = [];
-        issue.blockedBy.push(dep.depends_on_id);
-
-        // Add to blocker's blocks list
-        const blocker = byId.get(dep.depends_on_id);
-        if (blocker) {
-          if (!blocker.blocks) blocker.blocks = [];
-          blocker.blocks.push(dep.issue_id);
-        }
-      }
-    }
-
-    // Group by status
-    const byStatus: Record<string, Issue[]> = {
-      'open': [],
-      'closed': [],
-      'in_progress': [],
-      'blocked': [],
-    };
-
-    let stats = {
-      total: issues.length,
-      open: 0,
-      closed: 0,
-      blocked: 0,
-    };
-
-    for (const issue of issues) {
-      // Filter blockedBy to only include open blockers (closed blockers don't block anymore)
-      if (issue.blockedBy) {
-        issue.blockedBy = issue.blockedBy.filter(blockerId => {
-          const blocker = byId.get(blockerId);
-          return blocker && blocker.status !== 'closed';
-        });
-      }
-
-      const isBlocked = issue.blockedBy && issue.blockedBy.length > 0;
-      const actualStatus = isBlocked && issue.status === 'open' ? 'blocked' : issue.status;
-
-      if (byStatus[actualStatus]) {
-        byStatus[actualStatus].push(issue);
-      }
-
-      // Update stats
-      if (actualStatus === 'open') stats.open++;
-      else if (actualStatus === 'closed') stats.closed++;
-      else if (actualStatus === 'blocked') stats.blocked++;
-    }
-
-    db.close();
-
-    return { issues, byStatus, byId, stats };
-  } catch (error) {
-    console.error('Error loading beads from database:', error);
-    return {
-      issues: [],
-      byStatus: { 'open': [], 'closed': [], 'in_progress': [], 'blocked': [] },
-      byId: new Map(),
-      stats: { total: 0, open: 0, closed: 0, blocked: 0 },
-    };
-  }
+  return {
+    id,
+    title: stringValue(value.title),
+    description: stringValue(value.description),
+    status,
+    displayStatus: status,
+    priority: Number.isFinite(priority) ? priority : 2,
+    issue_type: stringValue(value.issue_type, stringValue(value.type, 'task')),
+    assignee: optionalString(value.assignee),
+    labels: stringArray(value.labels),
+    created_at: stringValue(value.created_at),
+    updated_at: stringValue(value.updated_at),
+    closed_at: optionalString(value.closed_at),
+    dependencies: dependencyEdges(value.dependencies),
+  };
 }
 
 /**
- * Find .beads/ directory by walking up from current directory
+ * Normalize bd's tolerant JSON DTOs in two passes: issues first, then graph edges.
+ * Raw status, issue type, and dependency type values are deliberately not coerced.
  */
-export async function findBeadsDir(startPath: string = process.cwd()): Promise<string | null> {
-  let currentPath = startPath;
+export function normalizeBeads(value: unknown): BeadsData {
+  if (!Array.isArray(value)) {
+    throw new Error('bd list returned JSON that is not an array');
+  }
 
-  while (true) {
-    const beadsPath = join(currentPath, '.beads');
+  const issues = value.filter(isObject).map(normalizeIssue).filter((issue): issue is Issue => issue !== null);
+  const byId = new Map(issues.map((issue) => [issue.id, issue]));
 
-    try {
-      const stats = await stat(beadsPath);
-      if (stats.isDirectory()) {
-        return beadsPath;
+  for (const issue of issues) {
+    for (const edge of issue.dependencies) {
+      if (!edge.depends_on_id) continue;
+
+      if (edge.type === 'parent-child') {
+        issue.parent = edge.depends_on_id;
+        const parent = byId.get(edge.depends_on_id);
+        if (parent && !parent.children?.includes(issue.id)) {
+          (parent.children ??= []).push(issue.id);
+        }
+      } else if (edge.type === 'blocks') {
+        (issue.blockedBy ??= []).push(edge.depends_on_id);
+        const blocker = byId.get(edge.depends_on_id);
+        if (blocker) (blocker.blocks ??= []).push(issue.id);
       }
-    } catch {
-      // Directory doesn't exist, continue
+    }
+  }
+
+  const byStatus: Record<string, Issue[]> = Object.fromEntries(KNOWN_STATUSES.map((status) => [status, []]));
+  const stats = { total: issues.length, open: 0, closed: 0, blocked: 0 };
+
+  for (const issue of issues) {
+    if (issue.blockedBy) {
+      issue.blockedBy = issue.blockedBy.filter((id) => {
+        const blocker = byId.get(id);
+        return blocker !== undefined && blocker.status !== 'closed';
+      });
     }
 
-    const parentPath = join(currentPath, '..');
-    if (parentPath === currentPath) {
-      // Reached root
-      return null;
-    }
+    const displayStatus = issue.status === 'open' && issue.blockedBy?.length ? 'blocked' : issue.status;
+    issue.displayStatus = displayStatus;
+    (byStatus[displayStatus] ??= []).push(issue);
 
-    currentPath = parentPath;
+    if (displayStatus === 'open') stats.open++;
+    else if (displayStatus === 'closed') stats.closed++;
+    else if (displayStatus === 'blocked') stats.blocked++;
+  }
+
+  return { issues, byStatus, byId, stats };
+}
+
+/** Read every issue through the supported bd JSON interface. */
+export async function loadBeads(beadsPath = '.beads'): Promise<BeadsData> {
+  const cwd = workspaceForBeadsPath(beadsPath);
+  const value = await readBdJson(['list', '--all', '--limit', '0', '--json'], cwd);
+  return normalizeBeads(value);
+}
+
+/** Discover the active .beads directory through bd, including redirects. */
+export async function findBeadsDir(startPath = process.cwd()): Promise<string | null> {
+  try {
+    const value = await readBdJson(['where', '--json'], resolve(startPath));
+    if (!isObject(value) || typeof value.path !== 'string') return null;
+
+    const path = resolve(value.path);
+    return (await stat(path)).isDirectory() ? path : null;
+  } catch {
+    return null;
   }
 }

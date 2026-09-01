@@ -4,6 +4,7 @@ import { detectStatusChanges, notifyStatusChange } from '../utils/notifications'
 import { LAYOUT } from '../utils/constants';
 
 type StatusKey = 'open' | 'closed' | 'in_progress' | 'blocked';
+type VisibleColumns = Record<StatusKey, Issue[]>;
 
 interface ColumnState {
   selectedIndex: number;
@@ -79,6 +80,7 @@ interface BeadsStore {
   setReloadCallback: (callback: (() => void) | null) => void;
   setFilter: (filter: BeadsStore['filter']) => void;
   getFilteredIssues: () => Issue[];
+  getVisibleColumns: () => VisibleColumns;
   setTerminalSize: (width: number, height: number) => void;
 
   // Navigation actions
@@ -126,6 +128,44 @@ interface BeadsStore {
 
 const STATUS_KEYS: StatusKey[] = ['open', 'in_progress', 'blocked', 'closed'];
 
+function filterIssues(data: BeadsData, filter: BeadsStore['filter'], searchQuery: string): Issue[] {
+  let issues = data.issues;
+
+  if (searchQuery.trim()) {
+    const query = searchQuery.toLowerCase();
+    issues = issues.filter(issue =>
+      issue.title.toLowerCase().includes(query) ||
+      issue.description?.toLowerCase().includes(query) ||
+      issue.id.toLowerCase().includes(query)
+    );
+  }
+  if (filter.assignee) issues = issues.filter(issue => issue.assignee === filter.assignee);
+  if (filter.tags?.length) {
+    issues = issues.filter(issue => issue.labels?.some(label => filter.tags?.includes(label)));
+  }
+  if (filter.status) issues = issues.filter(issue => issue.displayStatus === filter.status);
+  if (filter.priority !== undefined) issues = issues.filter(issue => issue.priority === filter.priority);
+
+  return issues;
+}
+
+function groupVisibleIssues(issues: Issue[]): VisibleColumns {
+  const columns: VisibleColumns = { open: [], in_progress: [], blocked: [], closed: [] };
+  for (const issue of issues) {
+    if (issue.displayStatus in columns) columns[issue.displayStatus as StatusKey].push(issue);
+  }
+  return columns;
+}
+
+function resetColumnStates(): Record<StatusKey, ColumnState> {
+  return {
+    open: { selectedIndex: 0, scrollOffset: 0 },
+    in_progress: { selectedIndex: 0, scrollOffset: 0 },
+    blocked: { selectedIndex: 0, scrollOffset: 0 },
+    closed: { selectedIndex: 0, scrollOffset: 0 },
+  };
+}
+
 export const useBeadsStore = create<BeadsStore>((set, get) => ({
   data: {
     issues: [],
@@ -153,12 +193,7 @@ export const useBeadsStore = create<BeadsStore>((set, get) => ({
 
   // Navigation state - per column
   selectedColumn: 0,
-  columnStates: {
-    'open': { selectedIndex: 0, scrollOffset: 0 },
-    'in_progress': { selectedIndex: 0, scrollOffset: 0 },
-    'blocked': { selectedIndex: 0, scrollOffset: 0 },
-    'closed': { selectedIndex: 0, scrollOffset: 0 },
-  },
+  columnStates: resetColumnStates(),
   itemsPerPage: 10, // Will be recalculated based on terminal height
 
   // UI state
@@ -191,12 +226,16 @@ export const useBeadsStore = create<BeadsStore>((set, get) => ({
     const issueCardHeight = LAYOUT.issueCardHeight;
     const availableHeight = Math.max(height - uiOverhead, issueCardHeight);
     const itemsPerPage = Math.max(Math.floor(availableHeight / issueCardHeight), 1);
+    const columnStates = { ...get().columnStates };
+    for (const statusKey of STATUS_KEYS) {
+      const selectedIndex = columnStates[statusKey].selectedIndex;
+      columnStates[statusKey] = {
+        selectedIndex,
+        scrollOffset: Math.floor(selectedIndex / itemsPerPage) * itemsPerPage,
+      };
+    }
 
-    set({
-      terminalWidth: width,
-      terminalHeight: height,
-      itemsPerPage,
-    });
+    set({ terminalWidth: width, terminalHeight: height, itemsPerPage, columnStates });
   },
 
   setData: (data) => {
@@ -210,18 +249,15 @@ export const useBeadsStore = create<BeadsStore>((set, get) => ({
       }
     }
 
-    // Validate and reset column states if needed
+    const visibleColumns = groupVisibleIssues(filterIssues(data, state.filter, state.searchQuery));
     const newColumnStates = { ...state.columnStates };
     for (const statusKey of STATUS_KEYS) {
-      const issuesInColumn = data.byStatus[statusKey]?.length || 0;
-      const currentState = newColumnStates[statusKey];
-
-      if (currentState.selectedIndex >= issuesInColumn) {
-        newColumnStates[statusKey] = {
-          selectedIndex: Math.max(0, issuesInColumn - 1),
-          scrollOffset: 0,
-        };
-      }
+      const issueCount = visibleColumns[statusKey].length;
+      const selectedIndex = Math.min(state.columnStates[statusKey].selectedIndex, Math.max(0, issueCount - 1));
+      newColumnStates[statusKey] = {
+        selectedIndex,
+        scrollOffset: Math.floor(selectedIndex / state.itemsPerPage) * state.itemsPerPage,
+      };
     }
 
     // Update state
@@ -234,45 +270,15 @@ export const useBeadsStore = create<BeadsStore>((set, get) => ({
 
   setReloadCallback: (callback) => set({ reloadCallback: callback }),
 
-  setFilter: (filter) => set({ filter }),
+  setFilter: (filter) => set({ filter, columnStates: resetColumnStates() }),
 
   getFilteredIssues: () => {
     const { data, filter, searchQuery } = get();
-    let issues = data.issues;
+    return filterIssues(data, filter, searchQuery);
+  },
 
-    // Text search across title, description, and ID
-    if (searchQuery.trim()) {
-      const query = searchQuery.toLowerCase();
-      issues = issues.filter(issue =>
-        issue.title.toLowerCase().includes(query) ||
-        issue.description?.toLowerCase().includes(query) ||
-        issue.id.toLowerCase().includes(query)
-      );
-    }
-
-    // Filter by assignee
-    if (filter.assignee) {
-      issues = issues.filter(issue => issue.assignee === filter.assignee);
-    }
-
-    // Filter by tags
-    if (filter.tags && filter.tags.length > 0) {
-      issues = issues.filter(issue =>
-        issue.labels?.some(label => filter.tags?.includes(label))
-      );
-    }
-
-    // Filter by status
-    if (filter.status) {
-      issues = issues.filter(issue => issue.status === filter.status);
-    }
-
-    // Filter by priority
-    if (filter.priority !== undefined) {
-      issues = issues.filter(issue => issue.priority === filter.priority);
-    }
-
-    return issues;
+  getVisibleColumns: () => {
+    return groupVisibleIssues(get().getFilteredIssues());
   },
 
   getStatusKey: () => {
@@ -281,40 +287,32 @@ export const useBeadsStore = create<BeadsStore>((set, get) => ({
   },
 
   getSelectedIssue: () => {
-    const { data, selectedColumn, columnStates } = get();
+    const { selectedColumn, columnStates } = get();
     const statusKey = STATUS_KEYS[selectedColumn];
-    const issues = data.byStatus[statusKey] || [];
+    const issues = get().getVisibleColumns()[statusKey];
     const selectedIndex = columnStates[statusKey].selectedIndex;
     return issues[selectedIndex] || null;
   },
 
   selectIssueById: (id: string) => {
-    const { data, columnStates, itemsPerPage } = get();
+    const { data, itemsPerPage } = get();
     const searchId = id.toLowerCase();
 
-    // Search through all status columns
+    // ID lookup remains global. Clear active filters so the selected issue is also visible.
     for (let colIndex = 0; colIndex < STATUS_KEYS.length; colIndex++) {
       const statusKey = STATUS_KEYS[colIndex];
       const issues = data.byStatus[statusKey] || [];
-
       const issueIndex = issues.findIndex(issue =>
-        issue.id.toLowerCase() === searchId ||
-        issue.id.toLowerCase().includes(searchId)
+        issue.id.toLowerCase() === searchId || issue.id.toLowerCase().includes(searchId)
       );
 
       if (issueIndex !== -1) {
-        // Found it - update selection
-        const newOffset = Math.floor(issueIndex / itemsPerPage) * itemsPerPage;
-        set({
-          selectedColumn: colIndex,
-          columnStates: {
-            ...columnStates,
-            [statusKey]: {
-              selectedIndex: issueIndex,
-              scrollOffset: newOffset,
-            },
-          },
-        });
+        const columnStates = resetColumnStates();
+        columnStates[statusKey] = {
+          selectedIndex: issueIndex,
+          scrollOffset: Math.floor(issueIndex / itemsPerPage) * itemsPerPage,
+        };
+        set({ selectedColumn: colIndex, columnStates, searchQuery: '', filter: {} });
         return true;
       }
     }
@@ -322,9 +320,9 @@ export const useBeadsStore = create<BeadsStore>((set, get) => ({
   },
 
   getTotalPages: () => {
-    const { data, selectedColumn, itemsPerPage } = get();
+    const { selectedColumn, itemsPerPage } = get();
     const statusKey = STATUS_KEYS[selectedColumn];
-    const issues = data.byStatus[statusKey] || [];
+    const issues = get().getVisibleColumns()[statusKey];
     return Math.ceil(issues.length / itemsPerPage) || 1;
   },
 
@@ -362,9 +360,9 @@ export const useBeadsStore = create<BeadsStore>((set, get) => ({
   },
 
   moveDown: () => {
-    const { data, selectedColumn, columnStates, itemsPerPage } = get();
+    const { selectedColumn, columnStates, itemsPerPage } = get();
     const statusKey = STATUS_KEYS[selectedColumn];
-    const issues = data.byStatus[statusKey] || [];
+    const issues = get().getVisibleColumns()[statusKey];
     const currentState = columnStates[statusKey];
 
     if (currentState.selectedIndex < issues.length - 1) {
@@ -418,9 +416,9 @@ export const useBeadsStore = create<BeadsStore>((set, get) => ({
   },
 
   jumpToLast: () => {
-    const { data, selectedColumn, columnStates, itemsPerPage } = get();
+    const { selectedColumn, columnStates, itemsPerPage } = get();
     const statusKey = STATUS_KEYS[selectedColumn];
-    const issues = data.byStatus[statusKey] || [];
+    const issues = get().getVisibleColumns()[statusKey];
     const lastIndex = Math.max(0, issues.length - 1);
     const newOffset = Math.max(0, lastIndex - itemsPerPage + 1);
 
@@ -436,9 +434,9 @@ export const useBeadsStore = create<BeadsStore>((set, get) => ({
   },
 
   jumpToPage: (page: number) => {
-    const { data, selectedColumn, columnStates, itemsPerPage } = get();
+    const { selectedColumn, columnStates, itemsPerPage } = get();
     const statusKey = STATUS_KEYS[selectedColumn];
-    const issues = data.byStatus[statusKey] || [];
+    const issues = get().getVisibleColumns()[statusKey];
     const totalPages = Math.ceil(issues.length / itemsPerPage) || 1;
 
     // Clamp page to valid range
@@ -523,6 +521,7 @@ export const useBeadsStore = create<BeadsStore>((set, get) => ({
     set({
       searchQuery: '',
       filter: {},
+      columnStates: resetColumnStates(),
       showSearch: false,
       showFilter: false,
     });
@@ -565,7 +564,7 @@ export const useBeadsStore = create<BeadsStore>((set, get) => ({
     set({ viewMode: state.previousView });
   },
 
-  setSearchQuery: (query) => set({ searchQuery: query }),
+  setSearchQuery: (query) => set({ searchQuery: query, columnStates: resetColumnStates() }),
 
   // Toast actions
   showToast: (message, type) => {

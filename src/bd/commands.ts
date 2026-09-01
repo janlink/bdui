@@ -1,7 +1,4 @@
-import { exec } from 'child_process';
-import { promisify } from 'util';
-
-const execAsync = promisify(exec);
+import { readBdJson, runBd } from './client';
 
 export interface CreateIssueParams {
   title: string;
@@ -18,141 +15,106 @@ export interface UpdateIssueParams {
   title?: string;
   description?: string;
   priority?: number;
-  status?: 'open' | 'closed' | 'in_progress' | 'blocked';
+  status?: string;
   assignee?: string;
   labels?: string[];
 }
 
-/**
- * Create a new issue using bd CLI
- */
+export interface CloseIssueParams {
+  id: string;
+  reason?: string;
+}
+
+type IssueDto = Record<string, unknown>;
+type ReadJson = typeof readBdJson;
+
+export interface BdListOptions {
+  cwd?: string;
+  readJson?: ReadJson;
+}
+
+function currentWorkspace(): string {
+  return process.cwd();
+}
+
+/** Create an issue with the current bd CLI. */
 export async function createIssue(params: CreateIssueParams): Promise<string> {
-  const args: string[] = ['bd', 'new'];
+  const args = ['create', params.title, '--json'];
 
-  // Add title
-  args.push(params.title);
+  if (params.description !== undefined) args.push('--description', params.description);
+  if (params.priority !== undefined) args.push('--priority', String(params.priority));
+  if (params.issueType) args.push('--type', params.issueType);
+  if (params.assignee) args.push('--assignee', params.assignee);
+  if (params.labels?.length) args.push('--labels', params.labels.join(','));
+  if (params.parent) args.push('--parent', params.parent);
 
-  // Add description if provided
-  if (params.description) {
-    args.push('-d', params.description);
+  const value = await readBdJson(args, currentWorkspace());
+  if (typeof value !== 'object' || value === null || Array.isArray(value)) {
+    throw new Error('bd create returned unexpected JSON');
   }
 
-  // Add priority if provided
-  if (params.priority !== undefined) {
-    args.push('-p', params.priority.toString());
-  }
-
-  // Add issue type if provided
-  if (params.issueType) {
-    args.push('-t', params.issueType);
-  }
-
-  // Add assignee if provided
-  if (params.assignee) {
-    args.push('-a', params.assignee);
-  }
-
-  // Add labels if provided
-  if (params.labels && params.labels.length > 0) {
-    args.push('-l', params.labels.join(','));
-  }
-
-  // Add parent if provided
-  if (params.parent) {
-    args.push('--parent', params.parent);
-  }
-
-  try {
-    const { stdout } = await execAsync(args.join(' '));
-    return stdout.trim();
-  } catch (error) {
-    throw new Error(`Failed to create issue: ${error instanceof Error ? error.message : 'Unknown error'}`);
-  }
+  const id = (value as IssueDto).id;
+  if (typeof id !== 'string' || !id) throw new Error('bd create did not return an issue id');
+  return id;
 }
 
-/**
- * Update an existing issue using bd CLI
- */
-export async function updateIssue(params: UpdateIssueParams): Promise<void> {
-  const args: string[] = ['bd', 'edit', params.id];
-
-  // Add title if provided
-  if (params.title) {
-    args.push('-t', params.title);
-  }
-
-  // Add description if provided
-  if (params.description !== undefined) {
-    args.push('-d', params.description);
-  }
-
-  // Add priority if provided
-  if (params.priority !== undefined) {
-    args.push('-p', params.priority.toString());
-  }
-
-  // Add status if provided
-  if (params.status) {
-    args.push('-s', params.status);
-  }
-
-  // Add assignee if provided
-  if (params.assignee !== undefined) {
-    args.push('-a', params.assignee || '');
-  }
-
-  // Add labels if provided
-  if (params.labels) {
-    args.push('-l', params.labels.join(','));
-  }
-
-  try {
-    await execAsync(args.join(' '));
-  } catch (error) {
-    throw new Error(`Failed to update issue: ${error instanceof Error ? error.message : 'Unknown error'}`);
-  }
+export async function closeIssue(params: CloseIssueParams): Promise<void>;
+export async function closeIssue(id: string, reason?: string): Promise<void>;
+export async function closeIssue(paramsOrId: CloseIssueParams | string, reason?: string): Promise<void> {
+  const params = typeof paramsOrId === 'string' ? { id: paramsOrId, reason } : paramsOrId;
+  const args = ['close', params.id, '--json'];
+  if (params.reason !== undefined) args.push('--reason', params.reason);
+  await runBd(args, { cwd: currentWorkspace() });
 }
 
-/**
- * Get available assignees from the database
- */
-export async function getAssignees(): Promise<string[]> {
-  try {
-    const { stdout } = await execAsync('bd list --format json');
-    const issues = JSON.parse(stdout);
-    const assignees = new Set<string>();
+export async function updateIssue(params: UpdateIssueParams): Promise<void>;
+export async function updateIssue(id: string, params: Omit<UpdateIssueParams, 'id'>): Promise<void>;
+export async function updateIssue(
+  paramsOrId: UpdateIssueParams | string,
+  changes?: Omit<UpdateIssueParams, 'id'>,
+): Promise<void> {
+  const params = typeof paramsOrId === 'string' ? { ...changes, id: paramsOrId } : paramsOrId;
+  const shouldClose = params.status === 'closed';
+  const args = ['update', params.id, '--json'];
 
-    for (const issue of issues) {
-      if (issue.assignee) {
-        assignees.add(issue.assignee);
-      }
+  if (params.title !== undefined) args.push('--title', params.title);
+  if (params.description !== undefined) args.push('--description', params.description);
+  if (params.priority !== undefined) args.push('--priority', String(params.priority));
+  if (params.status !== undefined && !shouldClose) args.push('--status', params.status);
+  if (params.assignee !== undefined) args.push('--assignee', params.assignee);
+  if (params.labels !== undefined) args.push('--set-labels', params.labels.join(','));
+
+  if (args.length > 3) await runBd(args, { cwd: currentWorkspace() });
+  if (shouldClose) await closeIssue(params.id);
+}
+
+async function listIssueDtos(options: BdListOptions = {}): Promise<IssueDto[]> {
+  const readJson = options.readJson ?? readBdJson;
+  const value = await readJson(
+    ['list', '--all', '--limit', '0', '--json'],
+    options.cwd ?? currentWorkspace(),
+  );
+  if (!Array.isArray(value)) throw new Error('bd list returned JSON that is not an array');
+  return value.filter((item): item is IssueDto =>
+    typeof item === 'object' && item !== null && !Array.isArray(item),
+  );
+}
+
+export async function getAssignees(options: BdListOptions = {}): Promise<string[]> {
+  const assignees = new Set<string>();
+  for (const issue of await listIssueDtos(options)) {
+    if (typeof issue.assignee === 'string' && issue.assignee) assignees.add(issue.assignee);
+  }
+  return [...assignees].sort();
+}
+
+export async function getLabels(options: BdListOptions = {}): Promise<string[]> {
+  const labels = new Set<string>();
+  for (const issue of await listIssueDtos(options)) {
+    if (!Array.isArray(issue.labels)) continue;
+    for (const label of issue.labels) {
+      if (typeof label === 'string') labels.add(label);
     }
-
-    return Array.from(assignees).sort();
-  } catch {
-    return [];
   }
-}
-
-/**
- * Get available labels from the database
- */
-export async function getLabels(): Promise<string[]> {
-  try {
-    const { stdout } = await execAsync('bd list --format json');
-    const issues = JSON.parse(stdout);
-    const labels = new Set<string>();
-
-    for (const issue of issues) {
-      if (issue.labels) {
-        for (const label of issue.labels) {
-          labels.add(label);
-        }
-      }
-    }
-
-    return Array.from(labels).sort();
-  } catch {
-    return [];
-  }
+  return [...labels].sort();
 }

@@ -1,18 +1,27 @@
-// Matches bd's actual SQLite schema
+export interface DependencyEdge {
+  issue_id: string;
+  depends_on_id: string;
+  type: string;
+  [key: string]: unknown;
+}
+
+// Normalized from bd's public JSON output.
 export interface Issue {
   id: string;
   title: string;
   description: string;
-  status: 'open' | 'closed' | 'in_progress' | 'blocked';
-  priority: number; // 0-4 (0=lowest, 4=highest)
-  issue_type: 'task' | 'epic' | 'bug' | 'feature' | 'chore';
+  status: string;
+  displayStatus: string;
+  priority: number; // 0-4 (0=highest, 4=lowest)
+  issue_type: string;
   assignee?: string | null;
   labels?: string[]; // From labels table
   created_at: string;
   updated_at: string;
   closed_at?: string | null;
 
-  // From dependencies table
+  // Raw bd dependency edges plus derived relationships.
+  dependencies: DependencyEdge[];
   parent?: string;
   children?: string[];
   blockedBy?: string[];
