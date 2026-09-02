@@ -101,7 +101,7 @@ function flattenTree(roots: TreeNode[]): FlatNode[] {
 export function TreeView({ data, terminalHeight }: TreeViewProps) {
   const [selectedIndex, setSelectedIndex] = useState(0);
   const [scrollOffset, setScrollOffset] = useState(0);
-  const [showDetails, setShowDetails] = useState(false);
+  const showDetails = useBeadsStore(state => state.showDetails);
   const selectIssueById = useBeadsStore(state => state.selectIssueById);
   const navigateToEditIssue = useBeadsStore(state => state.navigateToEditIssue);
 
@@ -134,11 +134,6 @@ export function TreeView({ data, terminalHeight }: TreeViewProps) {
           setScrollOffset(newIndex - itemsPerPage + 1);
         }
       }
-    }
-
-    // Toggle details
-    if (key.return || input === ' ') {
-      setShowDetails(!showDetails);
     }
 
     // Edit selected issue
@@ -188,52 +183,44 @@ export function TreeView({ data, terminalHeight }: TreeViewProps) {
         </Box>
       </Box>
 
-      <Box>
-        {/* Tree */}
-        <Box flexDirection="column">
-          {visibleNodes.map((node, idx) => {
-            const globalIndex = scrollOffset + idx;
-            const isSelected = globalIndex === selectedIndex;
-            const connector = node.isLast ? '└──' : '├──';
-            const typeColor = typeColors[node.issue.issue_type] || 'white';
-            const statusColor = statusColors[node.issue.status] || 'white';
+      <Box flexGrow={1} overflow="hidden">
+        {showDetails && selectedIssue ? (
+          <Box flexGrow={1} overflow="hidden">
+            <DetailPanel issue={selectedIssue} maxHeight={terminalHeight - 8} />
+          </Box>
+        ) : (
+          <Box flexDirection="column">
+            {visibleNodes.map((node, idx) => {
+              const globalIndex = scrollOffset + idx;
+              const isSelected = globalIndex === selectedIndex;
+              const connector = node.isLast ? '└──' : '├──';
+              const typeColor = typeColors[node.issue.issue_type] || 'white';
+              const statusColor = statusColors[node.issue.status] || 'white';
 
-            return (
-              <Box key={node.issue.id} flexDirection="column" marginBottom={1}>
-                {/* Current node */}
-                <Box backgroundColor={isSelected ? 'blue' : undefined}>
-                  <Text dimColor>{node.prefix}{connector} </Text>
-                  <Text bold color={isSelected ? 'white' : 'white'}>
-                    {node.issue.title.substring(0, 50)}
-                    {node.issue.title.length > 50 ? '...' : ''}
-                  </Text>
+              return (
+                <Box key={node.issue.id} flexDirection="column" marginBottom={1}>
+                  <Box backgroundColor={isSelected ? 'blue' : undefined}>
+                    <Text dimColor>{node.prefix}{connector} </Text>
+                    <Text bold color={isSelected ? 'white' : 'white'}>
+                      {node.issue.title.substring(0, 50)}
+                      {node.issue.title.length > 50 ? '...' : ''}
+                    </Text>
+                  </Box>
+                  <Box marginLeft={node.prefix.length + 4}>
+                    <Text dimColor>({node.issue.id})</Text>
+                    <Text color={typeColor}> [{node.issue.issue_type}]</Text>
+                    <Text color={statusColor}> {node.issue.status}</Text>
+                    <Text dimColor> P{node.issue.priority}</Text>
+                    {node.issue.blockedBy && node.issue.blockedBy.length > 0 && (
+                      <Text color="red"> 🚫</Text>
+                    )}
+                  </Box>
                 </Box>
-                <Box marginLeft={node.prefix.length + 4}>
-                  <Text dimColor>({node.issue.id})</Text>
-                  <Text color={typeColor}> [{node.issue.issue_type}]</Text>
-                  <Text color={statusColor}> {node.issue.status}</Text>
-                  <Text dimColor> P{node.issue.priority}</Text>
-                  {node.issue.blockedBy && node.issue.blockedBy.length > 0 && (
-                    <Text color="red"> 🚫</Text>
-                  )}
-                </Box>
-              </Box>
-            );
-          })}
+              );
+            })}
 
-          {/* Scroll indicators */}
-          {scrollOffset > 0 && (
-            <Text dimColor>↑ More above...</Text>
-          )}
-          {scrollOffset + itemsPerPage < flatNodes.length && (
-            <Text dimColor>↓ More below...</Text>
-          )}
-        </Box>
-
-        {/* Detail panel */}
-        {showDetails && selectedIssue && (
-          <Box marginLeft={2}>
-            <DetailPanel issue={selectedIssue} />
+            {scrollOffset > 0 && <Text dimColor>↑ More above...</Text>}
+            {scrollOffset + itemsPerPage < flatNodes.length && <Text dimColor>↓ More below...</Text>}
           </Box>
         )}
       </Box>

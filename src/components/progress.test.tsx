@@ -4,6 +4,7 @@ import { Readable, Writable } from 'node:stream';
 import { render } from 'ink';
 import { normalizeBeads } from '../bd/parser';
 import { useBeadsStore } from '../state/store';
+import { Board } from './Board';
 import { DetailPanel } from './DetailPanel';
 import { IssueCard } from './IssueCard';
 
@@ -95,5 +96,14 @@ test('single-child progress uses singular copy in details', async () => {
   const output = await renderText(<DetailPanel issue={singleChildData.byId.get('single-parent')!} />);
   expect(output).toContain('1/1 child closed (100%)');
   expect(output).not.toContain('1/1 children closed');
+});
+
+test('details replace the board at the minimum supported width', async () => {
+  useBeadsStore.setState({ terminalWidth: 60, terminalHeight: 30, showDetails: true });
+  const output = await renderText(<Board />, 60, 30);
+
+  expect(output).toMatch(/parent work/i);
+  expect(output).toContain('Type:');
+  expect(output).not.toContain('Terminal too narrow for detail panel');
 });
 

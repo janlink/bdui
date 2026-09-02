@@ -80,7 +80,7 @@ function buildDependencyLevels(data: BeadsData): GraphNode[][] {
 export function DependencyGraph({ data, terminalWidth, terminalHeight }: DependencyGraphProps) {
   const [selectedIndex, setSelectedIndex] = useState(0);
   const [scrollOffset, setScrollOffset] = useState(0);
-  const [showDetails, setShowDetails] = useState(false);
+  const showDetails = useBeadsStore(state => state.showDetails);
   const selectIssueById = useBeadsStore(state => state.selectIssueById);
   const navigateToEditIssue = useBeadsStore(state => state.navigateToEditIssue);
 
@@ -113,11 +113,6 @@ export function DependencyGraph({ data, terminalWidth, terminalHeight }: Depende
           setScrollOffset(newIndex - itemsPerPage + 1);
         }
       }
-    }
-
-    // Toggle details
-    if (key.return || input === ' ') {
-      setShowDetails(!showDetails);
     }
 
     // Edit selected issue
@@ -187,9 +182,13 @@ export function DependencyGraph({ data, terminalWidth, terminalHeight }: Depende
         <Text dimColor>← Dependencies flow from left to right →</Text>
       </Box>
 
-      <Box>
-        {/* Graph visualization */}
-        <Box flexDirection="column">
+      <Box flexGrow={1} overflow="hidden">
+        {showDetails && selectedIssue ? (
+          <Box flexGrow={1} overflow="hidden">
+            <DetailPanel issue={selectedIssue} maxHeight={terminalHeight - 10} />
+          </Box>
+        ) : (
+          <Box flexDirection="column">
           {Array.from(visibleLevels.entries()).map(([levelIdx, levelNodes]) => {
             const totalInLevel = levels[levelIdx]?.length || 0;
 
@@ -270,12 +269,6 @@ export function DependencyGraph({ data, terminalWidth, terminalHeight }: Depende
           {scrollOffset + itemsPerPage < flatNodes.length && (
             <Text dimColor>↓ More below...</Text>
           )}
-        </Box>
-
-        {/* Detail panel */}
-        {showDetails && selectedIssue && (
-          <Box marginLeft={2}>
-            <DetailPanel issue={selectedIssue} />
           </Box>
         )}
       </Box>

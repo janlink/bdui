@@ -57,12 +57,7 @@ function KanbanView() {
 
   // Responsive layout calculations
   const COLUMN_WIDTH = LAYOUT.columnWidth;
-  const DETAIL_PANEL_WIDTH = LAYOUT.detailPanelWidth;
-  const MIN_WIDTH_FOR_DETAIL = COLUMN_WIDTH * 5 + DETAIL_PANEL_WIDTH + 10;
   const MIN_WIDTH_FOR_ALL_COLUMNS = COLUMN_WIDTH * 5 + 10;
-
-  // Auto-hide detail panel on narrow screens
-  const shouldShowDetails = showDetails && terminalWidth >= MIN_WIDTH_FOR_DETAIL;
 
   // Determine how many columns to show
   const visibleColumns = terminalWidth < MIN_WIDTH_FOR_ALL_COLUMNS && terminalWidth >= COLUMN_WIDTH * 2
@@ -124,36 +119,27 @@ function KanbanView() {
 
       {/* Main content */}
       <Box flexGrow={1} overflow="hidden">
-        {/* Board columns */}
-        <Box flexShrink={0}>
-          {columnsToShow.map(({ key, title }, idx) => {
-            const columnState = columnStates[key];
-            return (
-              <StatusColumn
-                key={key}
-                title={title}
-                issues={visibleColumnsByStatus[key]}
-                isActive={selectedColumn === firstVisibleColumn + idx}
-                selectedIndex={columnState.selectedIndex}
-                scrollOffset={columnState.scrollOffset}
-                itemsPerPage={itemsPerPage}
-                statusKey={key}
-              />
-            );
-          })}
-        </Box>
-
-        {/* Detail panel */}
-        {shouldShowDetails && (
-          <Box marginLeft={2} flexGrow={1} overflow="hidden">
+        {showDetails ? (
+          <Box flexGrow={1} overflow="hidden">
             <DetailPanel issue={selectedIssue} maxHeight={terminalHeight - 10} />
           </Box>
-        )}
-        {showDetails && !shouldShowDetails && (
-          <Box marginLeft={2} padding={1} borderStyle="single" borderColor={theme.colors.warning}>
-            <Text color={theme.colors.warning}>
-              Terminal too narrow for detail panel (need {MIN_WIDTH_FOR_DETAIL} cols)
-            </Text>
+        ) : (
+          <Box flexShrink={0}>
+            {columnsToShow.map(({ key, title }, idx) => {
+              const columnState = columnStates[key];
+              return (
+                <StatusColumn
+                  key={key}
+                  title={title}
+                  issues={visibleColumnsByStatus[key]}
+                  isActive={selectedColumn === firstVisibleColumn + idx}
+                  selectedIndex={columnState.selectedIndex}
+                  scrollOffset={columnState.scrollOffset}
+                  itemsPerPage={itemsPerPage}
+                  statusKey={key}
+                />
+              );
+            })}
           </Box>
         )}
       </Box>

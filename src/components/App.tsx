@@ -109,6 +109,7 @@ export function App() {
   const clearFilters = useBeadsStore(state => state.clearFilters);
   const setViewMode = useBeadsStore(state => state.setViewMode);
   const viewMode = useBeadsStore(state => state.viewMode);
+  const showDetails = useBeadsStore(state => state.showDetails);
   const showSearch = useBeadsStore(state => state.showSearch);
   const showFilter = useBeadsStore(state => state.showFilter);
   const showExportDialog = useBeadsStore(state => state.showExportDialog);
@@ -152,6 +153,11 @@ export function App() {
 
     // If modals are active, let those components handle input
     if (showSearch || showFilter || showExportDialog || showThemeSelector || showJumpToPage) {
+      return;
+    }
+
+    if (key.escape && showDetails) {
+      toggleDetails();
       return;
     }
 
