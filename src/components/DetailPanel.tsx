@@ -68,6 +68,7 @@ export function getDescriptionPage(
 interface DetailPanelProps {
   issue: Issue | null;
   maxHeight?: number;
+  availableWidth?: number;
 }
 
 interface DetailPagingOverlays {
@@ -84,7 +85,7 @@ export function detailPagingIsActive(overlays: DetailPagingOverlays): boolean {
   return !Object.values(overlays).some(Boolean);
 }
 
-export function DetailPanel({ issue, maxHeight }: DetailPanelProps) {
+export function DetailPanel({ issue, maxHeight, availableWidth = 50 }: DetailPanelProps) {
   const currentTheme = useBeadsStore(state => state.currentTheme);
   const pagingIsActive = useBeadsStore(state => detailPagingIsActive({
     showSearch: state.showSearch,
@@ -97,12 +98,26 @@ export function DetailPanel({ issue, maxHeight }: DetailPanelProps) {
   }));
   const theme = getTheme(currentTheme);
 
-  // Reserve rows for the panel chrome, header, description title, and paging
-  // hint. Advancing by this size can never skip a line hidden by clipping.
-  const descriptionPageSize = maxHeight ? Math.max(1, Math.min(8, maxHeight - 9)) : 8;
   const [descriptionOffset, setDescriptionOffset] = useState(0);
-  // minWidth 50 minus the outer border and horizontal padding leaves 46 columns.
-  const descriptionPage = getDescriptionPage(issue?.description || '', 46, descriptionPageSize, descriptionOffset);
+  // The border and horizontal padding consume four cells. Reserve eight rows
+  // for the same vertical chrome and header; reserve one more only when the
+  // paging hint is actually needed.
+  const descriptionWidth = Math.max(1, availableWidth - 4);
+  const roomyPageSize = maxHeight ? Math.max(1, maxHeight - 8) : 8;
+  const roomyPage = getDescriptionPage(
+    issue?.description || '',
+    descriptionWidth,
+    roomyPageSize,
+    descriptionOffset,
+  );
+  const descriptionPage = (roomyPage.hasPrevious || roomyPage.hasMore) && maxHeight
+    ? getDescriptionPage(
+      issue?.description || '',
+      descriptionWidth,
+      Math.max(1, maxHeight - 9),
+      descriptionOffset,
+    )
+    : roomyPage;
 
   useEffect(() => setDescriptionOffset(0), [issue?.id]);
 

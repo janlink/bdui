@@ -18,8 +18,8 @@ import { Toast } from './Toast';
 import { FiltersBanner } from './FiltersBanner';
 import { ConfirmDialog } from './ConfirmDialog';
 import { CommandBar } from './CommandBar';
-import { LAYOUT } from '../utils/constants';
-import { Footer } from './Footer';
+import { hasActiveFilters, LAYOUT } from '../utils/constants';
+import { Footer, getFooterHeight } from './Footer';
 
 function KanbanView() {
   const data = useBeadsStore(state => state.data);
@@ -68,6 +68,14 @@ function KanbanView() {
   const shouldShowDetailsAlongside = showDetails && terminalWidth >= (
     visibleColumns * COLUMN_WIDTH + LAYOUT.detailPanelWidth + 2
   );
+  // Header: 2. Optional rows include their borders and bottom margins.
+  const detailsHeight = Math.max(1, terminalHeight
+    - 2
+    - getFooterHeight()
+    - (hasActiveFilters(filter, searchQuery) ? 4 : 0)
+    - (showSearch ? 5 : 0)
+    - (showFilter ? 14 : 0)
+    - (showJumpToPage ? 3 : 0));
 
   const statusConfig = [
     { key: 'open', title: 'Open' },
@@ -124,7 +132,11 @@ function KanbanView() {
       <Box flexGrow={1} overflow="hidden">
         {showDetails && !shouldShowDetailsAlongside ? (
           <Box flexGrow={1} overflow="hidden">
-            <DetailPanel issue={selectedIssue} maxHeight={terminalHeight - 10} />
+            <DetailPanel
+              issue={selectedIssue}
+              maxHeight={detailsHeight}
+              availableWidth={terminalWidth}
+            />
           </Box>
         ) : (
           <>
@@ -147,7 +159,11 @@ function KanbanView() {
             </Box>
             {shouldShowDetailsAlongside && (
               <Box marginLeft={2} flexGrow={1} overflow="hidden">
-                <DetailPanel issue={selectedIssue} maxHeight={terminalHeight - 10} />
+                <DetailPanel
+                  issue={selectedIssue}
+                  maxHeight={detailsHeight}
+                  availableWidth={terminalWidth - visibleColumns * COLUMN_WIDTH - 2}
+                />
               </Box>
             )}
           </>
@@ -237,7 +253,9 @@ export function Board() {
     <Box flexDirection="column" width={terminalWidth} height={terminalHeight}>
       {/* Render view based on mode */}
       {viewMode === 'kanban' && <KanbanView />}
-      {viewMode === 'tree' && <TreeView data={data} terminalHeight={terminalHeight} />}
+      {viewMode === 'tree' && (
+        <TreeView data={data} terminalWidth={terminalWidth} terminalHeight={terminalHeight} />
+      )}
       {viewMode === 'graph' && (
         <DependencyGraph
           data={data}

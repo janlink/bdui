@@ -40,7 +40,7 @@ export function StatusColumn({
   const statusColor = getStatusColor(statusKey, theme);
 
   return (
-    <Box flexDirection="column" paddingX={1} minWidth={LAYOUT.columnWidth}>
+    <Box flexDirection="column" paddingX={1} width={LAYOUT.columnWidth}>
       {/* Header */}
       <Box
         borderStyle={isActive ? 'double' : 'single'}

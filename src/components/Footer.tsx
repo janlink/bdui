@@ -8,7 +8,12 @@ interface FooterProps {
   currentView: 'kanban' | 'tree' | 'graph' | 'stats';
 }
 
-export const FOOTER_PRIMARY_SHORTCUTS = '/ search | f filter | Enter/Space details | : cmd |';
+export const FOOTER_PRIMARY_SHORTCUTS = '/ search | f filter | Enter/Space details | : cmd';
+
+/** Border plus three fixed shortcut rows. */
+export function getFooterHeight(): number {
+  return 5;
+}
 
 export function Footer({ currentView }: FooterProps) {
   const currentTheme = useBeadsStore(state => state.currentTheme);
@@ -23,21 +28,28 @@ export function Footer({ currentView }: FooterProps) {
   ];
 
   return (
-    <Box borderStyle="single" borderColor={theme.colors.border} paddingX={1}>
+    <Box
+      borderStyle="single"
+      borderColor={theme.colors.border}
+      paddingX={1}
+      flexDirection="column"
+      height={getFooterHeight()}
+      overflow="hidden"
+    >
+      <Text color={theme.colors.textDim}>{FOOTER_PRIMARY_SHORTCUTS}</Text>
+      <Box gap={1}>
+        {views.map(v => (
+          <Text
+            key={v.key}
+            color={currentView === v.key ? theme.colors.primary : theme.colors.textDim}
+            bold={currentView === v.key}
+          >
+            {currentView === v.key ? `[${v.num}]` : v.num} {v.name}
+          </Text>
+        ))}
+      </Box>
       <Box justifyContent="space-between" width="100%">
-        <Box gap={1}>
-          <Text color={theme.colors.textDim}>{FOOTER_PRIMARY_SHORTCUTS}</Text>
-          {views.map(v => (
-            <Text
-              key={v.key}
-              color={currentView === v.key ? theme.colors.primary : theme.colors.textDim}
-              bold={currentView === v.key}
-            >
-              {currentView === v.key ? `[${v.num}]` : v.num} {v.name}
-            </Text>
-          ))}
-          <Text color={theme.colors.textDim}>| ? help | q quit</Text>
-        </Box>
+        <Text color={theme.colors.textDim}>? help | q quit</Text>
         <Text color={notificationsEnabled ? theme.colors.success : theme.colors.textDim}>
           n:{notificationsEnabled ? 'ON' : 'off'}
         </Text>

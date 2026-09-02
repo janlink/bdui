@@ -2,7 +2,7 @@ import React, { useState, useMemo } from 'react';
 import { Box, Text, useInput } from 'ink';
 import { useBeadsStore } from '../state/store';
 import { DetailPanel } from './DetailPanel';
-import { Footer } from './Footer';
+import { Footer, getFooterHeight } from './Footer';
 import type { Issue, BeadsData } from '../types';
 
 interface DependencyGraphProps {
@@ -185,7 +185,11 @@ export function DependencyGraph({ data, terminalWidth, terminalHeight }: Depende
       <Box flexGrow={1} overflow="hidden">
         {showDetails && selectedIssue ? (
           <Box flexGrow={1} overflow="hidden">
-            <DetailPanel issue={selectedIssue} maxHeight={terminalHeight - 10} />
+            <DetailPanel
+              issue={selectedIssue}
+              maxHeight={terminalHeight - 4 - 4 - getFooterHeight()}
+              availableWidth={terminalWidth}
+            />
           </Box>
         ) : (
           <Box flexDirection="column">

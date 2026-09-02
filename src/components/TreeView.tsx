@@ -2,7 +2,7 @@ import React, { useState, useMemo } from 'react';
 import { Box, Text, useInput } from 'ink';
 import { useBeadsStore } from '../state/store';
 import { DetailPanel } from './DetailPanel';
-import { Footer } from './Footer';
+import { Footer, getFooterHeight } from './Footer';
 import type { Issue, BeadsData } from '../types';
 
 interface TreeNode {
@@ -20,6 +20,7 @@ interface FlatNode {
 
 interface TreeViewProps {
   data: BeadsData;
+  terminalWidth: number;
   terminalHeight: number;
 }
 
@@ -98,7 +99,7 @@ function flattenTree(roots: TreeNode[]): FlatNode[] {
   return flat;
 }
 
-export function TreeView({ data, terminalHeight }: TreeViewProps) {
+export function TreeView({ data, terminalWidth, terminalHeight }: TreeViewProps) {
   const [selectedIndex, setSelectedIndex] = useState(0);
   const [scrollOffset, setScrollOffset] = useState(0);
   const showDetails = useBeadsStore(state => state.showDetails);
@@ -186,7 +187,11 @@ export function TreeView({ data, terminalHeight }: TreeViewProps) {
       <Box flexGrow={1} overflow="hidden">
         {showDetails && selectedIssue ? (
           <Box flexGrow={1} overflow="hidden">
-            <DetailPanel issue={selectedIssue} maxHeight={terminalHeight - 8} />
+            <DetailPanel
+              issue={selectedIssue}
+              maxHeight={terminalHeight - 3 - getFooterHeight()}
+              availableWidth={terminalWidth}
+            />
           </Box>
         ) : (
           <Box flexDirection="column">

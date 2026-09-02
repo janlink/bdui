@@ -141,6 +141,106 @@ test('long wide title stays on one row without reducing the description page', a
   expect(output).not.toContain('界'.repeat(40));
 });
 
+test('roomy full-width details show more than eight wrapped lines without paging', async () => {
+  const description = Array.from(
+    { length: 10 },
+    (_, index) => `LINE ${index + 1}: ${'wide-panel-content '.repeat(4)}END-${index + 1}`,
+  ).join('\n');
+  const data = normalizeBeads([{
+    id: 'roomy', title: 'Roomy details', status: 'open', issue_type: 'bug', priority: 1,
+    description,
+  }]);
+  useBeadsStore.setState({
+    data,
+    previousIssues: new Map(data.byId),
+    terminalWidth: 120,
+    terminalHeight: 40,
+    showDetails: true,
+  });
+
+  const output = await renderText(<Board />, 120, 40);
+  expect(output).toContain('END-10');
+  expect(output).not.toContain('↓ more');
+  expect(output).not.toContain('↑ previous');
+});
+
+test('all detail layouts use their actual available width', async () => {
+  const description = Array.from(
+    { length: 14 },
+    (_, index) => `ROW ${String(index + 1).padStart(2, '0')} ${'x'.repeat(45)} END-${index + 1}`,
+  ).join('\n');
+  const data = normalizeBeads([
+    { id: 'layout-parent', title: 'Layout parent', status: 'open', issue_type: 'epic', priority: 1,
+      description },
+    { id: 'layout-child', title: 'Layout child', status: 'closed', issue_type: 'task', priority: 2,
+      dependencies: [{ issue_id: 'layout-child', depends_on_id: 'layout-parent', type: 'parent-child' }] },
+  ]);
+
+  for (const { viewMode, columns } of [
+    { viewMode: 'kanban' as const, columns: 250 },
+    { viewMode: 'tree' as const, columns: 120 },
+    { viewMode: 'graph' as const, columns: 120 },
+  ]) {
+    useBeadsStore.setState({
+      data,
+      previousIssues: new Map(data.byId),
+      viewMode,
+      terminalWidth: columns,
+      terminalHeight: 40,
+      showDetails: true,
+    });
+
+    const output = await renderText(<Board />, columns, 40);
+    expect(output).toContain('END-14');
+    expect(output).not.toContain('↓ more');
+  }
+});
+
+test('detail paging starts exactly one row past each visible layout boundary', async () => {
+  const layouts = [
+    { name: 'replacement Kanban', viewMode: 'kanban' as const, columns: 120, pageRows: 15 },
+    { name: 'side-by-side Kanban', viewMode: 'kanban' as const, columns: 250, pageRows: 15 },
+    { name: 'Tree', viewMode: 'tree' as const, columns: 120, pageRows: 14 },
+    { name: 'Graph', viewMode: 'graph' as const, columns: 120, pageRows: 9 },
+  ];
+
+  for (const layout of layouts) {
+    for (const overflow of [false, true]) {
+      const rowCount = layout.pageRows + (overflow ? 1 : 0);
+      const description = Array.from({ length: rowCount }, (_, index) => `BOUNDARY-${index + 1}`).join('\n');
+      const data = normalizeBeads([
+        { id: 'boundary-parent', title: layout.name, status: 'open', issue_type: 'epic', priority: 1,
+          description },
+        { id: 'boundary-child', title: 'Child', status: 'closed', issue_type: 'task', priority: 2,
+          dependencies: [{ issue_id: 'boundary-child', depends_on_id: 'boundary-parent', type: 'parent-child' }] },
+      ]);
+      useBeadsStore.setState({
+        data,
+        previousIssues: new Map(data.byId),
+        viewMode: layout.viewMode,
+        terminalWidth: layout.columns,
+        terminalHeight: 30,
+        showDetails: true,
+        showSearch: false,
+        showFilter: false,
+        showJumpToPage: false,
+        searchQuery: '',
+        filter: {},
+      });
+
+      const output = await renderText(<Board />, layout.columns, 30);
+      expect(output).toContain('BOUNDARY-1');
+      if (overflow) {
+        expect(output).not.toContain(`BOUNDARY-${rowCount}`);
+        expect(output).toContain('↓ more');
+      } else {
+        expect(output).toContain(`BOUNDARY-${layout.pageRows}`);
+        expect(output).not.toContain('↓ more');
+      }
+    }
+  }
+});
+
 test('description stays visible before variable-height metadata', async () => {
   const data = normalizeBeads([{
     id: 'verbose', title: 'Verbose issue', status: 'blocked', issue_type: 'bug', priority: 1,
