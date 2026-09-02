@@ -112,7 +112,7 @@ export function TreeView({ data, terminalHeight }: TreeViewProps) {
 
   useInput((input, key) => {
     // Navigation
-    if (key.upArrow || input === 'k') {
+    if ((!showDetails && key.upArrow) || input === 'k') {
       if (selectedIndex > 0) {
         const newIndex = selectedIndex - 1;
         setSelectedIndex(newIndex);
@@ -124,7 +124,7 @@ export function TreeView({ data, terminalHeight }: TreeViewProps) {
       }
     }
 
-    if (key.downArrow || input === 'j') {
+    if ((!showDetails && key.downArrow) || input === 'j') {
       if (selectedIndex < flatNodes.length - 1) {
         const newIndex = selectedIndex + 1;
         setSelectedIndex(newIndex);

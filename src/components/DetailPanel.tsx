@@ -1,5 +1,5 @@
-import React from 'react';
-import { Box, Text } from 'ink';
+import React, { useEffect, useState } from 'react';
+import { Box, Text, useInput } from 'ink';
 import type { Issue } from '../types';
 import { useBeadsStore } from '../state/store';
 import { getTheme } from '../themes/themes';
@@ -8,23 +8,109 @@ import {
   getPriorityColor,
   getTypeColor,
   getStatusColor,
-  truncateText,
-  LAYOUT,
 } from '../utils/constants';
+
+const graphemeSegmenter = new Intl.Segmenter(undefined, { granularity: 'grapheme' });
+
+function wrapDescriptionLine(line: string, lineWidth: number): string[] {
+  if (!line) return [''];
+
+  const graphemes = Array.from(graphemeSegmenter.segment(line), ({ segment }) => segment);
+  const wrapped: string[] = [];
+  let start = 0;
+
+  while (start < graphemes.length) {
+    let end = start;
+    let width = 0;
+    while (end < graphemes.length) {
+      const nextWidth = Bun.stringWidth(graphemes[end]);
+      if (end > start && width + nextWidth > lineWidth) break;
+      width += nextWidth;
+      end += 1;
+    }
+
+    if (end < graphemes.length) {
+      for (let index = end - 1; index >= start; index -= 1) {
+        if (/\s/u.test(graphemes[index])) {
+          end = index + 1;
+          break;
+        }
+      }
+    }
+
+    wrapped.push(graphemes.slice(start, end).join(''));
+    start = end;
+  }
+
+  return wrapped;
+}
+
+export function getDescriptionPage(
+  description: string,
+  lineWidth: number,
+  pageSize: number,
+  offset: number,
+) {
+  const lines = description
+    .split('\n')
+    .flatMap(line => wrapDescriptionLine(line, lineWidth));
+  const safeOffset = Math.min(offset, Math.max(0, lines.length - 1));
+  const endOffset = Math.min(safeOffset + pageSize, lines.length);
+  return {
+    lines: lines.slice(safeOffset, endOffset),
+    nextOffset: endOffset < lines.length ? endOffset : safeOffset,
+    previousOffset: Math.max(0, safeOffset - pageSize),
+    hasMore: endOffset < lines.length,
+    hasPrevious: safeOffset > 0,
+  };
+}
 
 interface DetailPanelProps {
   issue: Issue | null;
   maxHeight?: number;
 }
 
+interface DetailPagingOverlays {
+  showSearch: boolean;
+  showFilter: boolean;
+  showExportDialog: boolean;
+  showThemeSelector: boolean;
+  showJumpToPage: boolean;
+  showHelp: boolean;
+  showConfirmDialog: boolean;
+}
+
+export function detailPagingIsActive(overlays: DetailPagingOverlays): boolean {
+  return !Object.values(overlays).some(Boolean);
+}
+
 export function DetailPanel({ issue, maxHeight }: DetailPanelProps) {
   const currentTheme = useBeadsStore(state => state.currentTheme);
+  const pagingIsActive = useBeadsStore(state => detailPagingIsActive({
+    showSearch: state.showSearch,
+    showFilter: state.showFilter,
+    showExportDialog: state.showExportDialog,
+    showThemeSelector: state.showThemeSelector,
+    showJumpToPage: state.showJumpToPage,
+    showHelp: state.showHelp,
+    showConfirmDialog: state.showConfirmDialog,
+  }));
   const theme = getTheme(currentTheme);
 
-  // Calculate description length based on available height
-  // Rough estimate: each line is ~50 chars, subtract ~20 lines for other content
-  const availableLines = maxHeight ? Math.max(2, maxHeight - 22) : 8;
-  const descriptionMaxLength = Math.min(LAYOUT.descriptionMaxLength, availableLines * 50);
+  // Reserve rows for the panel chrome, header, description title, and paging
+  // hint. Advancing by this size can never skip a line hidden by clipping.
+  const descriptionPageSize = maxHeight ? Math.max(1, Math.min(8, maxHeight - 9)) : 8;
+  const [descriptionOffset, setDescriptionOffset] = useState(0);
+  // minWidth 50 minus the outer border and horizontal padding leaves 46 columns.
+  const descriptionPage = getDescriptionPage(issue?.description || '', 46, descriptionPageSize, descriptionOffset);
+
+  useEffect(() => setDescriptionOffset(0), [issue?.id]);
+
+  useInput((_input, key) => {
+    if (!issue?.description) return;
+    if (key.downArrow) setDescriptionOffset(descriptionPage.nextOffset);
+    if (key.upArrow) setDescriptionOffset(descriptionPage.previousOffset);
+  }, { isActive: pagingIsActive });
 
   if (!issue) {
     return (
@@ -63,9 +149,25 @@ export function DetailPanel({ issue, maxHeight }: DetailPanelProps) {
     >
       {/* Header */}
       <Box flexDirection="column" marginBottom={1}>
-        <Text bold color={theme.colors.primary}>{issue.title}</Text>
+        <Text bold color={theme.colors.primary} wrap="truncate-end">{issue.title}</Text>
         <Text color={theme.colors.textDim}>{issue.id}</Text>
       </Box>
+
+      {/* Description comes first so labels and dependency lists cannot push it
+          outside the panel's clipped viewport. */}
+      {issue.description && (
+        <Box flexDirection="column" flexShrink={0}>
+          <Text bold color={theme.colors.textDim}>Description:</Text>
+          <Text color={theme.colors.text}>{descriptionPage.lines.join('\n')}</Text>
+          {(descriptionPage.hasPrevious || descriptionPage.hasMore) && (
+            <Text color={theme.colors.textDim}>
+              {descriptionPage.hasPrevious ? '↑ previous' : ''}
+              {descriptionPage.hasPrevious && descriptionPage.hasMore ? ' | ' : ''}
+              {descriptionPage.hasMore ? '↓ more' : ''}
+            </Text>
+          )}
+        </Box>
+      )}
 
       {/* Metadata */}
       <Box flexDirection="column" gap={0} marginBottom={1}>
@@ -154,16 +256,6 @@ export function DetailPanel({ issue, maxHeight }: DetailPanelProps) {
           {issue.children.length > 5 && (
             <Text color={theme.colors.textDim}>  ... and {issue.children.length - 5} more</Text>
           )}
-        </Box>
-      )}
-
-      {/* Description */}
-      {issue.description && (
-        <Box flexDirection="column" marginTop={1} borderStyle="single" borderColor={theme.colors.border} padding={1}>
-          <Text bold color={theme.colors.textDim}>Description:</Text>
-          <Text color={theme.colors.text}>
-            {truncateText(issue.description, descriptionMaxLength, true)}
-          </Text>
         </Box>
       )}
 

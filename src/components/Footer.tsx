@@ -8,6 +8,8 @@ interface FooterProps {
   currentView: 'kanban' | 'tree' | 'graph' | 'stats';
 }
 
+export const FOOTER_PRIMARY_SHORTCUTS = '/ search | f filter | Enter/Space details | : cmd |';
+
 export function Footer({ currentView }: FooterProps) {
   const currentTheme = useBeadsStore(state => state.currentTheme);
   const notificationsEnabled = useBeadsStore(state => state.notificationsEnabled);
@@ -24,7 +26,7 @@ export function Footer({ currentView }: FooterProps) {
     <Box borderStyle="single" borderColor={theme.colors.border} paddingX={1}>
       <Box justifyContent="space-between" width="100%">
         <Box gap={1}>
-          <Text color={theme.colors.textDim}>/ search | f filter | : cmd |</Text>
+          <Text color={theme.colors.textDim}>{FOOTER_PRIMARY_SHORTCUTS}</Text>
           {views.map(v => (
             <Text
               key={v.key}

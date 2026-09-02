@@ -115,3 +115,43 @@ test('details preserve board context when both fit', async () => {
   expect(output).toContain('Type:');
 });
 
+test('minimum-height details show one complete line and paging control', async () => {
+  const data = normalizeBeads([{
+    id: 'short-panel', title: 'Short panel', status: 'open', issue_type: 'bug', priority: 1,
+    description: `${'A'.repeat(47)}\nSECOND PAGE LINE`,
+  }]);
+
+  const output = await renderText(<DetailPanel issue={data.byId.get('short-panel')!} maxHeight={10} />, 60, 10);
+  expect(output).toContain('A'.repeat(46));
+  expect(output).not.toContain('A'.repeat(47));
+  expect(output).not.toContain('SECOND PAGE LINE');
+  expect(output).toContain('↓ more');
+});
+
+test('long wide title stays on one row without reducing the description page', async () => {
+  const data = normalizeBeads([{
+    id: 'long-title', title: '界'.repeat(40), status: 'open', issue_type: 'bug', priority: 1,
+    description: 'FIRST VISIBLE ROW\nSECOND VISIBLE ROW',
+  }]);
+
+  const output = await renderText(<DetailPanel issue={data.byId.get('long-title')!} maxHeight={11} />, 60, 11);
+  expect(output).toContain('FIRST VISIBLE ROW');
+  expect(output).toContain('SECOND VISIBLE ROW');
+  expect(output).toContain('…');
+  expect(output).not.toContain('界'.repeat(40));
+});
+
+test('description stays visible before variable-height metadata', async () => {
+  const data = normalizeBeads([{
+    id: 'verbose', title: 'Verbose issue', status: 'blocked', issue_type: 'bug', priority: 1,
+    description: 'DESCRIPTION MARKER ' + 'readable words '.repeat(20),
+    labels: Array.from({ length: 20 }, (_, index) => `label-${index}`),
+    dependencies: Array.from({ length: 12 }, (_, index) => ({
+      issue_id: 'verbose', depends_on_id: `blocker-${index}`, type: 'blocks',
+    })),
+  }]);
+
+  const output = await renderText(<DetailPanel issue={data.byId.get('verbose')!} maxHeight={20} />, 60, 20);
+  expect(output).toContain('DESCRIPTION MARKER');
+});
+

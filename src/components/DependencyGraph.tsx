@@ -91,7 +91,7 @@ export function DependencyGraph({ data, terminalWidth, terminalHeight }: Depende
 
   useInput((input, key) => {
     // Navigation
-    if (key.upArrow || input === 'k') {
+    if ((!showDetails && key.upArrow) || input === 'k') {
       if (selectedIndex > 0) {
         const newIndex = selectedIndex - 1;
         setSelectedIndex(newIndex);
@@ -103,7 +103,7 @@ export function DependencyGraph({ data, terminalWidth, terminalHeight }: Depende
       }
     }
 
-    if (key.downArrow || input === 'j') {
+    if ((!showDetails && key.downArrow) || input === 'j') {
       if (selectedIndex < flatNodes.length - 1) {
         const newIndex = selectedIndex + 1;
         setSelectedIndex(newIndex);

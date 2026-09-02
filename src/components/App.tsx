@@ -260,17 +260,18 @@ export function App() {
       setViewMode('stats');
     }
 
-    // Navigation - Arrow keys and vim keys
-    if (key.upArrow || input === 'k') {
+    // Arrow keys scroll the description while details are open. Vim keys still
+    // change selection, so users can inspect another issue without closing it.
+    if ((!showDetails && key.upArrow) || input === 'k') {
       moveUp();
     }
-    if (key.downArrow || input === 'j') {
+    if ((!showDetails && key.downArrow) || input === 'j') {
       moveDown();
     }
-    if (key.leftArrow || input === 'h') {
+    if ((!showDetails && key.leftArrow) || input === 'h') {
       moveLeft();
     }
-    if (key.rightArrow || input === 'l') {
+    if ((!showDetails && key.rightArrow) || input === 'l') {
       moveRight();
     }
 
