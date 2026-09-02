@@ -75,10 +75,11 @@ export function IssueCard({ issue, isSelected = false }: IssueCardProps) {
         </Box>
       )}
 
-      {issue.children && issue.children.length > 0 && (
-        <Box>
-          <Text color={theme.colors.textDim}>
-            {issue.children.length} subtask{issue.children.length > 1 ? 's' : ''}
+      {issue.progress && (
+        <Box gap={1}>
+          <Text color={theme.colors.textDim}>Progress</Text>
+          <Text color={issue.progress.closed === issue.progress.total ? theme.colors.success : theme.colors.primary}>
+            {issue.progress.closed}/{issue.progress.total} ({issue.progress.percent}%)
           </Text>
         </Box>
       )}

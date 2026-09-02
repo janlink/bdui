@@ -96,6 +96,15 @@ export function DetailPanel({ issue, maxHeight }: DetailPanelProps) {
             <Text color={theme.colors.success}>@{issue.assignee}</Text>
           </Box>
         )}
+
+        {issue.progress && (
+          <Box gap={2}>
+            <Text color={theme.colors.textDim}>Progress:</Text>
+            <Text color={issue.progress.closed === issue.progress.total ? theme.colors.success : theme.colors.primary}>
+              {issue.progress.closed}/{issue.progress.total} {issue.progress.total === 1 ? 'child' : 'children'} closed ({issue.progress.percent}%)
+            </Text>
+          </Box>
+        )}
       </Box>
 
       {/* Labels */}

@@ -6,6 +6,12 @@ export interface DependencyEdge {
 }
 
 // Normalized from bd's public JSON output.
+export interface IssueProgress {
+  closed: number;
+  total: number;
+  percent: number;
+}
+
 export interface Issue {
   id: string;
   title: string;
@@ -24,6 +30,7 @@ export interface Issue {
   dependencies: DependencyEdge[];
   parent?: string;
   children?: string[];
+  progress?: IssueProgress;
   blockedBy?: string[];
   blocks?: string[];
 }

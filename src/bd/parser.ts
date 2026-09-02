@@ -95,6 +95,17 @@ export function normalizeBeads(value: unknown): BeadsData {
   const stats = { total: issues.length, open: 0, closed: 0, blocked: 0 };
 
   for (const issue of issues) {
+    if (issue.children?.length) {
+      const closed = issue.children.reduce((count, childId) => (
+        byId.get(childId)?.status === 'closed' ? count + 1 : count
+      ), 0);
+      issue.progress = {
+        closed,
+        total: issue.children.length,
+        percent: Math.round((closed / issue.children.length) * 100),
+      };
+    }
+
     if (issue.blockedBy) {
       issue.blockedBy = issue.blockedBy.filter((id) => {
         const blocker = byId.get(id);
