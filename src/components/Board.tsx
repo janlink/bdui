@@ -65,6 +65,9 @@ function KanbanView() {
     : terminalWidth < COLUMN_WIDTH * 2
     ? 1
     : 5;
+  const shouldShowDetailsAlongside = showDetails && terminalWidth >= (
+    visibleColumns * COLUMN_WIDTH + LAYOUT.detailPanelWidth + 2
+  );
 
   const statusConfig = [
     { key: 'open', title: 'Open' },
@@ -119,28 +122,35 @@ function KanbanView() {
 
       {/* Main content */}
       <Box flexGrow={1} overflow="hidden">
-        {showDetails ? (
+        {showDetails && !shouldShowDetailsAlongside ? (
           <Box flexGrow={1} overflow="hidden">
             <DetailPanel issue={selectedIssue} maxHeight={terminalHeight - 10} />
           </Box>
         ) : (
-          <Box flexShrink={0}>
-            {columnsToShow.map(({ key, title }, idx) => {
-              const columnState = columnStates[key];
-              return (
-                <StatusColumn
-                  key={key}
-                  title={title}
-                  issues={visibleColumnsByStatus[key]}
-                  isActive={selectedColumn === firstVisibleColumn + idx}
-                  selectedIndex={columnState.selectedIndex}
-                  scrollOffset={columnState.scrollOffset}
-                  itemsPerPage={itemsPerPage}
-                  statusKey={key}
-                />
-              );
-            })}
-          </Box>
+          <>
+            <Box flexShrink={0}>
+              {columnsToShow.map(({ key, title }, idx) => {
+                const columnState = columnStates[key];
+                return (
+                  <StatusColumn
+                    key={key}
+                    title={title}
+                    issues={visibleColumnsByStatus[key]}
+                    isActive={selectedColumn === firstVisibleColumn + idx}
+                    selectedIndex={columnState.selectedIndex}
+                    scrollOffset={columnState.scrollOffset}
+                    itemsPerPage={itemsPerPage}
+                    statusKey={key}
+                  />
+                );
+              })}
+            </Box>
+            {shouldShowDetailsAlongside && (
+              <Box marginLeft={2} flexGrow={1} overflow="hidden">
+                <DetailPanel issue={selectedIssue} maxHeight={terminalHeight - 10} />
+              </Box>
+            )}
+          </>
         )}
       </Box>
 

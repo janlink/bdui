@@ -107,3 +107,11 @@ test('details replace the board at the minimum supported width', async () => {
   expect(output).not.toContain('Terminal too narrow for detail panel');
 });
 
+test('details preserve board context when both fit', async () => {
+  useBeadsStore.setState({ terminalWidth: 250, terminalHeight: 30, showDetails: true });
+  const output = await renderText(<Board />, 250, 30);
+
+  expect(output).toMatch(/Open \(2\)/);
+  expect(output).toContain('Type:');
+});
+
