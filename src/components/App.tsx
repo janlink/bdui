@@ -58,7 +58,11 @@ export function App() {
         setData(data);
 
         // Set up watcher
-        const watcher = new BeadsWatcher(path);
+        const pollMs = Number(process.env.BDUI_POLL_MS);
+        const watcher = new BeadsWatcher(
+          path,
+          Number.isFinite(pollMs) && pollMs > 0 ? { intervalMs: pollMs } : {},
+        );
         activeWatcher = watcher;
         unsubscribe = watcher.subscribe((data) => {
           if (!disposed) setData(data);

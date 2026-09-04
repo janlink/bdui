@@ -46,7 +46,8 @@ export class BeadsWatcher {
   private readonly intervalMs: number;
   private readonly load: (beadsPath: string) => Promise<BeadsData>;
   private readonly onError: (error: unknown) => void;
-  private interval: ReturnType<typeof setInterval> | null = null;
+  private timer: ReturnType<typeof setTimeout> | null = null;
+  private running = false;
   private inFlight: Promise<void> | null = null;
   private pending = false;
   private generation = 0;
@@ -54,19 +55,26 @@ export class BeadsWatcher {
   private lastGoodData: BeadsData | null = null;
 
   constructor(private readonly beadsPath: string, options: BeadsWatcherOptions = {}) {
-    this.intervalMs = options.intervalMs ?? 1_000;
+    this.intervalMs = options.intervalMs ?? 5_000;
     this.load = options.load ?? loadBeads;
     this.onError = options.onError ?? ((error) => console.error('Error polling beads:', error));
   }
 
   start(): void {
-    if (this.interval) return;
-    this.interval = setInterval(() => void this.reload(), this.intervalMs);
+    if (this.running) return;
+    this.running = true;
+    const tick = () => {
+      void this.reload().finally(() => {
+        if (this.running) this.timer = setTimeout(tick, this.intervalMs);
+      });
+    };
+    this.timer = setTimeout(tick, this.intervalMs);
   }
 
   stop(): void {
-    if (this.interval) clearInterval(this.interval);
-    this.interval = null;
+    this.running = false;
+    if (this.timer) clearTimeout(this.timer);
+    this.timer = null;
     this.pending = false;
     this.generation++;
   }

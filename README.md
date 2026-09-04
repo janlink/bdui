@@ -125,6 +125,12 @@ bun run dev
 
 The app discovers the active workspace with `bd where --json`. It reads and writes through public `bd --json` commands, so embedded and server-backed Dolt workspaces are supported without accessing Beads' internal database schema.
 
+Background refresh polls the `bd` CLI every 5 seconds (your own edits refresh immediately). Set `BDUI_POLL_MS` to change the interval in milliseconds — raise it for large workspaces where `bd list` is slow, or lower it if you expect frequent external changes:
+
+```bash
+BDUI_POLL_MS=10000 bdui
+```
+
 ### Keyboard Shortcuts
 
 #### Navigation
