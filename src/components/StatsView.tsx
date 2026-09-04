@@ -64,12 +64,8 @@ export function StatsView({ issues, totalIssues, terminalWidth, terminalHeight }
     }
 
     const completionRate = issues.length > 0
-      ? ((statusCounts.closed / issues.length) * 100).toFixed(0)
-      : '0';
-
-    const blockedRate = issues.length > 0
-      ? ((statusCounts.blocked / issues.length) * 100).toFixed(0)
-      : '0';
+      ? Math.round((statusCounts.closed / issues.length) * 100)
+      : 0;
 
     const topAssignees = Array.from(assignees.entries())
       .sort((a, b) => b[1] - a[1])
@@ -79,18 +75,16 @@ export function StatsView({ issues, totalIssues, terminalWidth, terminalHeight }
       .sort((a, b) => b[1] - a[1])
       .slice(0, 5);
 
-    return { statusCounts, priorityCounts, typeCounts, completionRate, blockedRate, topAssignees, topLabels };
+    return { statusCounts, priorityCounts, typeCounts, completionRate, topAssignees, topLabels };
   }, [issues]);
 
-  const useWideLayout = terminalWidth >= 100;
+  const useWideLayout = terminalWidth >= 84;
   const columnWidth = useWideLayout ? Math.floor((terminalWidth - 4) / 2) : terminalWidth - 2;
   const labelWidth = 14;
   const barWidth = Math.max(10, columnWidth - labelWidth - 16); // padding, border, count, spacing
 
-  // Pad label to fixed width
   const padLabel = (label: string) => label.padEnd(labelWidth);
 
-  // Compact bar renderer
   const renderBar = (label: string, count: number, total: number, color: string) => {
     const filled = total > 0 ? Math.round((count / total) * barWidth) : 0;
     const empty = barWidth - filled;
@@ -105,59 +99,76 @@ export function StatsView({ issues, totalIssues, terminalWidth, terminalHeight }
     );
   };
 
+  // Full-width stacked progress bar across the status spectrum (done → open).
+  const total = issues.length;
+  const overviewBarWidth = Math.max(10, terminalWidth - 8);
+  const segments = [
+    { count: stats.statusCounts.closed, color: theme.colors.statusClosed },
+    { count: stats.statusCounts.in_progress, color: theme.colors.statusInProgress },
+    { count: stats.statusCounts.blocked, color: theme.colors.statusBlocked },
+    { count: stats.statusCounts.open, color: theme.colors.statusOpen },
+    { count: stats.statusCounts.other, color: theme.colors.textDim },
+  ];
+  let cumulative = 0;
+  let used = 0;
+  const segChars = segments.map(segment => {
+    cumulative += segment.count;
+    const target = total > 0 ? Math.round((cumulative / total) * overviewBarWidth) : 0;
+    const length = Math.max(0, target - used);
+    used = target;
+    return { color: segment.color, text: '█'.repeat(length) };
+  });
+  const remainder = Math.max(0, overviewBarWidth - used);
+
+  const headerCount = filtersActive ? `${issues.length}/${totalIssues}` : `${totalIssues}`;
+
   return (
     <Box flexDirection="column" width={terminalWidth} height={terminalHeight}>
       {/* Header */}
-      <Box marginBottom={1} justifyContent="space-between">
-        <Text bold color={theme.colors.primary}>Statistics</Text>
+      <Box justifyContent="space-between">
+        <Text bold color={theme.colors.primary}>BD TUI - Statistics</Text>
         <Box gap={2}>
-          <Text color={theme.colors.text}>
-            {issues.length}{filtersActive ? `/${totalIssues}` : ''} issues
-          </Text>
+          <Text color={theme.colors.textDim}>Total: <Text color={theme.colors.text}>{headerCount}</Text></Text>
           {filtersActive && <Text color={theme.colors.warning}>[filtered]</Text>}
-          <Text color={theme.colors.textDim}>? help</Text>
         </Box>
       </Box>
 
-      {/* Summary row */}
-      <Box marginBottom={1} gap={3}>
-        <Box gap={1}>
-          <Text color={theme.colors.statusOpen}>●</Text>
-          <Text>{stats.statusCounts.open} open</Text>
+      {/* Overview: flagship progress bar */}
+      <Box flexDirection="column" borderStyle="round" borderColor={theme.colors.border} paddingX={1} marginTop={1}>
+        <Box>
+          <Text bold color={theme.colors.primary}>Overview</Text>
+          <Box flexGrow={1} />
+          <Text color={theme.colors.success} bold>{stats.completionRate}% complete</Text>
+          <Text color={theme.colors.textDim}> · {stats.statusCounts.closed}/{total} done</Text>
         </Box>
-        <Box gap={1}>
-          <Text color={theme.colors.statusInProgress}>●</Text>
-          <Text>{stats.statusCounts.in_progress} in progress</Text>
+        <Box>
+          {segChars.map((segment, index) => (
+            <Text key={index} color={segment.color}>{segment.text}</Text>
+          ))}
+          {remainder > 0 && <Text color={theme.colors.textDim}>{'░'.repeat(remainder)}</Text>}
         </Box>
-        <Box gap={1}>
-          <Text color={theme.colors.statusBlocked}>●</Text>
-          <Text>{stats.statusCounts.blocked} blocked</Text>
+        <Box gap={3}>
+          <Box gap={1}><Text color={theme.colors.statusOpen}>●</Text><Text color={theme.colors.textDim}>{stats.statusCounts.open} open</Text></Box>
+          <Box gap={1}><Text color={theme.colors.statusInProgress}>●</Text><Text color={theme.colors.textDim}>{stats.statusCounts.in_progress} in progress</Text></Box>
+          <Box gap={1}><Text color={theme.colors.statusBlocked}>●</Text><Text color={theme.colors.textDim}>{stats.statusCounts.blocked} blocked</Text></Box>
+          <Box gap={1}><Text color={theme.colors.statusClosed}>●</Text><Text color={theme.colors.textDim}>{stats.statusCounts.closed} closed</Text></Box>
+          <Box gap={1}><Text color={theme.colors.textDim}>●</Text><Text color={theme.colors.textDim}>{stats.statusCounts.other} other</Text></Box>
         </Box>
-        <Box gap={1}>
-          <Text color={theme.colors.statusClosed}>●</Text>
-          <Text>{stats.statusCounts.closed} closed</Text>
-        </Box>
-        <Box gap={1}>
-          <Text color={theme.colors.textDim}>●</Text>
-          <Text>{stats.statusCounts.other} other</Text>
-        </Box>
-        <Text color={theme.colors.textDim}>│</Text>
-        <Text color={theme.colors.success}>{stats.completionRate}% done</Text>
       </Box>
 
       {/* Main content */}
-      <Box flexGrow={1} flexDirection={useWideLayout ? 'row' : 'column'} gap={1}>
+      <Box flexGrow={1} flexDirection={useWideLayout ? 'row' : 'column'} gap={1} marginTop={1}>
         {/* Left column */}
-        <Box flexDirection="column" width={columnWidth} gap={1}>
+        <Box flexDirection="column" width={useWideLayout ? columnWidth : undefined} gap={1}>
           {/* Status */}
           <Box flexDirection="column" borderStyle="round" borderColor={theme.colors.border} paddingX={1}>
             <Text bold color={theme.colors.primary}>Status</Text>
             <Box flexDirection="column">
-              {renderBar('Open', stats.statusCounts.open, issues.length, theme.colors.statusOpen)}
-              {renderBar('In Progress', stats.statusCounts.in_progress, issues.length, theme.colors.statusInProgress)}
-              {renderBar('Blocked', stats.statusCounts.blocked, issues.length, theme.colors.statusBlocked)}
-              {renderBar('Closed', stats.statusCounts.closed, issues.length, theme.colors.statusClosed)}
-              {renderBar('Other', stats.statusCounts.other, issues.length, theme.colors.textDim)}
+              {renderBar('Open', stats.statusCounts.open, total, theme.colors.statusOpen)}
+              {renderBar('In Progress', stats.statusCounts.in_progress, total, theme.colors.statusInProgress)}
+              {renderBar('Blocked', stats.statusCounts.blocked, total, theme.colors.statusBlocked)}
+              {renderBar('Closed', stats.statusCounts.closed, total, theme.colors.statusClosed)}
+              {renderBar('Other', stats.statusCounts.other, total, theme.colors.textDim)}
             </Box>
           </Box>
 
@@ -165,31 +176,31 @@ export function StatsView({ issues, totalIssues, terminalWidth, terminalHeight }
           <Box flexDirection="column" borderStyle="round" borderColor={theme.colors.border} paddingX={1}>
             <Text bold color={theme.colors.primary}>Priority</Text>
             <Box flexDirection="column">
-              {renderBar('P0 Critical', stats.priorityCounts.p0, issues.length, theme.colors.priorityCritical)}
-              {renderBar('P1 High', stats.priorityCounts.p1, issues.length, theme.colors.priorityHigh)}
-              {renderBar('P2 Medium', stats.priorityCounts.p2, issues.length, theme.colors.priorityMedium)}
-              {renderBar('P3 Low', stats.priorityCounts.p3, issues.length, theme.colors.priorityLow)}
-              {renderBar('P4 Backlog', stats.priorityCounts.p4, issues.length, theme.colors.priorityLowest)}
-            </Box>
-          </Box>
-
-          {/* Types */}
-          <Box flexDirection="column" borderStyle="round" borderColor={theme.colors.border} paddingX={1}>
-            <Text bold color={theme.colors.primary}>Type</Text>
-            <Box flexDirection="column">
-              {stats.typeCounts.epic > 0 && renderBar('Epic', stats.typeCounts.epic, issues.length, theme.colors.typeEpic)}
-              {stats.typeCounts.feature > 0 && renderBar('Feature', stats.typeCounts.feature, issues.length, theme.colors.typeFeature)}
-              {stats.typeCounts.bug > 0 && renderBar('Bug', stats.typeCounts.bug, issues.length, theme.colors.typeBug)}
-              {stats.typeCounts.task > 0 && renderBar('Task', stats.typeCounts.task, issues.length, theme.colors.typeTask)}
-              {stats.typeCounts.chore > 0 && renderBar('Chore', stats.typeCounts.chore, issues.length, theme.colors.typeChore)}
-              {stats.typeCounts.decision > 0 && renderBar('Decision', stats.typeCounts.decision, issues.length, theme.colors.accent)}
-              {stats.typeCounts.other > 0 && renderBar('Other', stats.typeCounts.other, issues.length, theme.colors.textDim)}
+              {renderBar('P0 Critical', stats.priorityCounts.p0, total, theme.colors.priorityCritical)}
+              {renderBar('P1 High', stats.priorityCounts.p1, total, theme.colors.priorityHigh)}
+              {renderBar('P2 Medium', stats.priorityCounts.p2, total, theme.colors.priorityMedium)}
+              {renderBar('P3 Low', stats.priorityCounts.p3, total, theme.colors.priorityLow)}
+              {renderBar('P4 Backlog', stats.priorityCounts.p4, total, theme.colors.priorityLowest)}
             </Box>
           </Box>
         </Box>
 
         {/* Right column */}
-        <Box flexDirection="column" width={columnWidth} gap={1}>
+        <Box flexDirection="column" width={useWideLayout ? columnWidth : undefined} gap={1}>
+          {/* Types */}
+          <Box flexDirection="column" borderStyle="round" borderColor={theme.colors.border} paddingX={1}>
+            <Text bold color={theme.colors.primary}>Type</Text>
+            <Box flexDirection="column">
+              {stats.typeCounts.epic > 0 && renderBar('Epic', stats.typeCounts.epic, total, theme.colors.typeEpic)}
+              {stats.typeCounts.feature > 0 && renderBar('Feature', stats.typeCounts.feature, total, theme.colors.typeFeature)}
+              {stats.typeCounts.bug > 0 && renderBar('Bug', stats.typeCounts.bug, total, theme.colors.typeBug)}
+              {stats.typeCounts.task > 0 && renderBar('Task', stats.typeCounts.task, total, theme.colors.typeTask)}
+              {stats.typeCounts.chore > 0 && renderBar('Chore', stats.typeCounts.chore, total, theme.colors.typeChore)}
+              {stats.typeCounts.decision > 0 && renderBar('Decision', stats.typeCounts.decision, total, theme.colors.accent)}
+              {stats.typeCounts.other > 0 && renderBar('Other', stats.typeCounts.other, total, theme.colors.textDim)}
+            </Box>
+          </Box>
+
           {/* Assignees */}
           <Box flexDirection="column" borderStyle="round" borderColor={theme.colors.border} paddingX={1}>
             <Text bold color={theme.colors.primary}>Assignees</Text>
@@ -200,7 +211,7 @@ export function StatsView({ issues, totalIssues, terminalWidth, terminalHeight }
                     ? assignee.slice(0, labelWidth - 2) + '…'
                     : assignee;
                   const color = assignee === 'unassigned' ? theme.colors.textDim : theme.colors.text;
-                  return <Box key={assignee}>{renderBar(displayName, count, issues.length, color)}</Box>;
+                  return <Box key={assignee}>{renderBar(displayName, count, total, color)}</Box>;
                 })
               ) : (
                 <Text color={theme.colors.textDim}>No assignees</Text>
@@ -217,7 +228,7 @@ export function StatsView({ issues, totalIssues, terminalWidth, terminalHeight }
                   const displayLabel = '#' + (label.length > labelWidth - 2
                     ? label.slice(0, labelWidth - 3) + '…'
                     : label);
-                  return <Box key={label}>{renderBar(displayLabel, count, issues.length, theme.colors.secondary)}</Box>;
+                  return <Box key={label}>{renderBar(displayLabel, count, total, theme.colors.secondary)}</Box>;
                 })
               ) : (
                 <Text color={theme.colors.textDim}>No labels</Text>

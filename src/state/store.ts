@@ -94,6 +94,7 @@ interface BeadsStore {
   resetStatusVisibility: () => void;
   toggleVisibilityPanel: () => void;
   getFilteredIssues: () => Issue[];
+  getStatsIssues: () => Issue[];
   getVisibleColumns: () => VisibleColumns;
   setTerminalSize: (width: number, height: number) => void;
 
@@ -139,6 +140,14 @@ interface BeadsStore {
   undo: () => UndoEntry | null;
   clearUndoHistory: () => void;
 }
+
+const ALL_STATUSES_VISIBLE: StatusVisibility = {
+  open: true,
+  in_progress: true,
+  blocked: true,
+  closed: true,
+  other: true,
+};
 
 function filterIssues(
   data: BeadsData,
@@ -311,6 +320,13 @@ export const useBeadsStore = create<BeadsStore>((set, get) => ({
   getFilteredIssues: () => {
     const { data, filter, searchQuery, statusVisibility } = get();
     return filterIssues(data, filter, searchQuery, statusVisibility);
+  },
+
+  // Statistics summarize the whole project, so they ignore the status
+  // visibility toggle (hiding closed would make completion metrics meaningless).
+  getStatsIssues: () => {
+    const { data, filter, searchQuery } = get();
+    return filterIssues(data, filter, searchQuery, ALL_STATUSES_VISIBLE);
   },
 
   getVisibleColumns: () => {

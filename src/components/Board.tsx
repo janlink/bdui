@@ -222,6 +222,7 @@ export function Board() {
   const reloadCallback = useBeadsStore(state => state.reloadCallback);
   const getSelectedIssue = useBeadsStore(state => state.getSelectedIssue);
   const getFilteredIssues = useBeadsStore(state => state.getFilteredIssues);
+  const getStatsIssues = useBeadsStore(state => state.getStatsIssues);
   const searchQuery = useBeadsStore(state => state.searchQuery);
   const filter = useBeadsStore(state => state.filter);
   const currentTheme = useBeadsStore(state => state.currentTheme);
@@ -232,6 +233,11 @@ export function Board() {
   const filteredIssues = useMemo(
     () => getFilteredIssues(),
     [data, searchQuery, filter, getFilteredIssues],
+  );
+
+  const statsIssues = useMemo(
+    () => getStatsIssues(),
+    [data, searchQuery, filter, getStatsIssues],
   );
 
   // Check minimum terminal width
@@ -273,7 +279,7 @@ export function Board() {
       )}
       {viewMode === 'stats' && (
         <StatsView
-          issues={filteredIssues}
+          issues={statsIssues}
           totalIssues={data.issues.length}
           terminalWidth={terminalWidth}
           terminalHeight={terminalHeight}
