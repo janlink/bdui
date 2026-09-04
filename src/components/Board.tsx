@@ -55,19 +55,19 @@ function KanbanView() {
     blocked: visibleColumnsByStatus.blocked.length,
   };
 
-  // Responsive layout calculations
-  const COLUMN_WIDTH = LAYOUT.columnWidth;
-  const MIN_WIDTH_FOR_ALL_COLUMNS = COLUMN_WIDTH * 5 + 10;
-
-  // Determine how many columns to show
-  const visibleColumns = terminalWidth < MIN_WIDTH_FOR_ALL_COLUMNS && terminalWidth >= COLUMN_WIDTH * 2
-    ? 2
-    : terminalWidth < COLUMN_WIDTH * 2
-    ? 1
-    : 5;
-  const shouldShowDetailsAlongside = showDetails && terminalWidth >= (
-    visibleColumns * COLUMN_WIDTH + LAYOUT.detailPanelWidth + 2
-  );
+  // Responsive layout: fill the terminal width with as many of the 5 columns as fit.
+  const MIN_COLUMN_WIDTH = 24;
+  const MAX_COLUMN_WIDTH = 60;
+  const shouldShowDetailsAlongside = showDetails
+    && terminalWidth >= MIN_COLUMN_WIDTH * 2 + LAYOUT.detailPanelWidth + 2;
+  const widthForColumns = shouldShowDetailsAlongside
+    ? terminalWidth - LAYOUT.detailPanelWidth - 2
+    : terminalWidth;
+  const visibleColumns = Math.min(5, Math.max(1, Math.floor(widthForColumns / MIN_COLUMN_WIDTH)));
+  const columnWidth = shouldShowDetailsAlongside
+    ? MIN_COLUMN_WIDTH
+    : Math.min(MAX_COLUMN_WIDTH, Math.floor(widthForColumns / visibleColumns));
+  const detailWidth = terminalWidth - visibleColumns * columnWidth - 2;
   // Header: 2. Optional rows include their borders and bottom margins.
   const detailsHeight = Math.max(1, terminalHeight
     - 2
@@ -153,6 +153,7 @@ function KanbanView() {
                     scrollOffset={columnState.scrollOffset}
                     itemsPerPage={itemsPerPage}
                     statusKey={key}
+                    width={columnWidth}
                   />
                 );
               })}
@@ -162,7 +163,7 @@ function KanbanView() {
                 <DetailPanel
                   issue={selectedIssue}
                   maxHeight={detailsHeight}
-                  availableWidth={terminalWidth - visibleColumns * COLUMN_WIDTH - 2}
+                  availableWidth={detailWidth}
                 />
               </Box>
             )}

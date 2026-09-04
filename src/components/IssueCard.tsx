@@ -7,16 +7,16 @@ import {
   PRIORITY_LABELS,
   getPriorityColor,
   getTypeColor,
-  truncateText,
   LAYOUT,
 } from '../utils/constants';
 
 interface IssueCardProps {
   issue: Issue;
   isSelected?: boolean;
+  width?: number;
 }
 
-export function IssueCard({ issue, isSelected = false }: IssueCardProps) {
+export function IssueCard({ issue, isSelected = false, width = LAYOUT.columnWidth - 2 }: IssueCardProps) {
   const currentTheme = useBeadsStore(state => state.currentTheme);
   const theme = getTheme(currentTheme);
 
@@ -30,11 +30,11 @@ export function IssueCard({ issue, isSelected = false }: IssueCardProps) {
       borderColor={isSelected ? theme.colors.primary : theme.colors.border}
       paddingX={1}
       flexDirection="column"
-      width={LAYOUT.columnWidth - 2}
+      width={width}
     >
       <Box flexDirection="column">
-        <Text bold color={isSelected ? theme.colors.primary : theme.colors.text}>
-          {truncateText(issue.title, LAYOUT.titleMaxLength)}
+        <Text bold wrap="truncate-end" color={isSelected ? theme.colors.primary : theme.colors.text}>
+          {issue.title}
         </Text>
         <Text color={theme.colors.textDim}>{issue.id}</Text>
       </Box>
@@ -43,7 +43,7 @@ export function IssueCard({ issue, isSelected = false }: IssueCardProps) {
         <Text color={typeColor}>{issue.issue_type}</Text>
         <Text color={theme.colors.textDim}>|</Text>
         <Text color={priorityColor}>P{issue.priority}</Text>
-        <Text color={theme.colors.textDim}>({priorityLabel.toLowerCase()})</Text>
+        <Text color={theme.colors.textDim} wrap="truncate-end">({priorityLabel.toLowerCase()})</Text>
       </Box>
 
       {issue.displayStatus === 'other' && (
@@ -53,14 +53,14 @@ export function IssueCard({ issue, isSelected = false }: IssueCardProps) {
       {issue.assignee && (
         <Box gap={1}>
           <Text color={theme.colors.textDim}>@</Text>
-          <Text color={theme.colors.success}>{issue.assignee}</Text>
+          <Text color={theme.colors.success} wrap="truncate-end">{issue.assignee}</Text>
         </Box>
       )}
 
       {issue.labels && issue.labels.length > 0 && (
         <Box gap={1}>
           <Text color={theme.colors.textDim}>#</Text>
-          <Text color={theme.colors.secondary}>{issue.labels.slice(0, 2).join(', ')}</Text>
+          <Text color={theme.colors.secondary} wrap="truncate-end">{issue.labels.slice(0, 2).join(', ')}</Text>
           {issue.labels.length > 2 && (
             <Text color={theme.colors.textDim}>+{issue.labels.length - 2}</Text>
           )}

@@ -14,6 +14,7 @@ interface StatusColumnProps {
   scrollOffset: number;
   itemsPerPage: number;
   statusKey: string;
+  width?: number;
 }
 
 export function StatusColumn({
@@ -24,6 +25,7 @@ export function StatusColumn({
   scrollOffset,
   itemsPerPage,
   statusKey,
+  width = LAYOUT.columnWidth,
 }: StatusColumnProps) {
   const currentTheme = useBeadsStore(state => state.currentTheme);
   const theme = getTheme(currentTheme);
@@ -40,7 +42,7 @@ export function StatusColumn({
   const statusColor = getStatusColor(statusKey, theme);
 
   return (
-    <Box flexDirection="column" paddingX={1} width={LAYOUT.columnWidth}>
+    <Box flexDirection="column" paddingX={1} width={width}>
       {/* Header */}
       <Box
         borderStyle={isActive ? 'double' : 'single'}
@@ -94,6 +96,7 @@ export function StatusColumn({
                 key={issue.id}
                 issue={issue}
                 isSelected={isSelected}
+                width={width - 2}
               />
             );
           })
