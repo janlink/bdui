@@ -1,6 +1,8 @@
 import React, { useState, useMemo } from 'react';
 import { Box, Text, useInput } from 'ink';
 import { useBeadsStore } from '../state/store';
+import { getTheme } from '../themes/themes';
+import { getTypeColor, getStatusColor, getPriorityColor } from '../utils/constants';
 import { DetailPanel } from './DetailPanel';
 import { Footer, getFooterHeight } from './Footer';
 import type { Issue, BeadsData } from '../types';
@@ -84,10 +86,14 @@ export function DependencyGraph({ data, terminalWidth, terminalHeight }: Depende
   const selectIssueById = useBeadsStore(state => state.selectIssueById);
   const navigateToEditIssue = useBeadsStore(state => state.navigateToEditIssue);
 
+  const currentTheme = useBeadsStore(state => state.currentTheme);
+  const theme = getTheme(currentTheme);
+
   const levels = useMemo(() => buildDependencyLevels(data), [data]);
   const flatNodes = useMemo(() => levels.flat(), [levels]);
 
-  const itemsPerPage = Math.max(Math.floor((terminalHeight - 12) / 5), 3);
+  // Dense one-line nodes; leave room for header, per-level labels, legend and footer.
+  const itemsPerPage = Math.max(terminalHeight - 11 - getFooterHeight(), 5);
 
   useInput((input, key) => {
     // Navigation
@@ -148,38 +154,18 @@ export function DependencyGraph({ data, terminalWidth, terminalHeight }: Depende
     visibleLevels.get(node.level)!.push(node);
   }
 
-  const typeColors: Record<string, string> = {
-    epic: 'magenta',
-    task: 'blue',
-    bug: 'red',
-    feature: 'green',
-    chore: 'gray',
-  };
-
-  const statusColors: Record<string, string> = {
-    open: 'blue',
-    in_progress: 'yellow',
-    blocked: 'red',
-    closed: 'green',
-  };
-
   return (
     <Box flexDirection="column" width="100%">
       {/* Header */}
       <Box marginBottom={1} flexDirection="column">
-        <Text bold color="cyan">
-          BD TUI - Dependency Graph - Interactive
+        <Text bold color={theme.colors.primary}>
+          BD TUI - Dependency Graph
         </Text>
         <Box gap={2}>
-          <Text dimColor>
-            Issues with dependencies: <Text color="white">{flatNodes.length}</Text>
-          </Text>
-          <Text dimColor>
-            Levels: <Text color="white">{levels.length}</Text>
-          </Text>
-          <Text dimColor>Selected: <Text color="cyan">{selectedIndex + 1}/{flatNodes.length}</Text></Text>
+          <Text color={theme.colors.textDim}>With deps: <Text color={theme.colors.text}>{flatNodes.length}</Text></Text>
+          <Text color={theme.colors.textDim}>Levels: <Text color={theme.colors.text}>{levels.length}</Text></Text>
+          <Text color={theme.colors.textDim}>Selected: <Text color={theme.colors.primary}>{selectedIndex + 1}/{flatNodes.length}</Text></Text>
         </Box>
-        <Text dimColor>← Dependencies flow from left to right →</Text>
       </Box>
 
       <Box flexGrow={1} overflow="hidden">
@@ -192,99 +178,73 @@ export function DependencyGraph({ data, terminalWidth, terminalHeight }: Depende
             />
           </Box>
         ) : (
-          <Box flexDirection="column">
-          {Array.from(visibleLevels.entries()).map(([levelIdx, levelNodes]) => {
-            const totalInLevel = levels[levelIdx]?.length || 0;
+          <Box flexDirection="column" width={terminalWidth}>
+            {Array.from(visibleLevels.entries()).map(([levelIdx, levelNodes]) => {
+              const totalInLevel = levels[levelIdx]?.length || 0;
 
-            return (
-              <Box key={levelIdx} flexDirection="column" marginBottom={1}>
-                {/* Level label */}
-                <Box>
-                  <Text bold color="yellow">Level {levelIdx}</Text>
-                  <Text dimColor> ({totalInLevel} issue{totalInLevel !== 1 ? 's' : ''})</Text>
-                </Box>
+              return (
+                <Box key={levelIdx} flexDirection="column">
+                  <Text color={theme.colors.warning} bold>
+                    Level {levelIdx} <Text color={theme.colors.textDim}>({totalInLevel})</Text>
+                  </Text>
 
-                {/* Issues in this level */}
-                <Box flexDirection="column" marginLeft={2}>
                   {levelNodes.map((node) => {
-                    const typeColor = typeColors[node.issue.issue_type] || 'white';
-                    const statusColor = statusColors[node.issue.status] || 'white';
+                    const typeColor = getTypeColor(node.issue.issue_type, theme);
+                    const statusColor = getStatusColor(node.issue.displayStatus, theme);
+                    const priorityColor = getPriorityColor(node.issue.priority, theme);
                     const globalIndex = flatNodes.findIndex(n => n.issue.id === node.issue.id);
                     const isSelected = globalIndex === selectedIndex;
-                    const isLastInVisibleLevel = levelNodes.indexOf(node) === levelNodes.length - 1;
+                    const nBlockedBy = node.issue.blockedBy?.length ?? 0;
+                    const nBlocks = node.issue.blocks?.length ?? 0;
+                    const nChildren = node.issue.children?.length ?? 0;
+
+                    const gutter = isSelected ? '▸ ' : '  ';
+                    const idStr = `${node.issue.id}  `;
+                    const badges = `${nBlockedBy ? ` x${nBlockedBy}` : ''}${nBlocks ? ` >${nBlocks}` : ''}${nChildren ? ` +${nChildren}` : ''}`;
+                    const right = ` ${node.issue.issue_type} ${node.issue.displayStatus} P${node.issue.priority}${badges}`;
+                    const titleWidth = Math.max(4, terminalWidth - 2 - gutter.length - idStr.length - right.length - 3);
+                    const rawTitle = node.issue.title || node.issue.id;
+                    const title = rawTitle.length > titleWidth ? `${rawTitle.slice(0, titleWidth - 1)}…` : rawTitle;
 
                     return (
-                      <Box key={node.issue.id} flexDirection="column" marginBottom={1}>
-                        {/* Issue box */}
-                        <Box backgroundColor={isSelected ? 'blue' : undefined}>
-                          <Text dimColor>
-                            {isLastInVisibleLevel ? '└─' : '├─'}
-                          </Text>
-                          <Text bold color={isSelected ? 'white' : 'white'}>
-                            [{node.issue.id}]
-                          </Text>
-                          <Text color={isSelected ? 'white' : undefined}>
-                            {' '}{node.issue.title.substring(0, 40)}
-                          </Text>
-                          {node.issue.title.length > 40 && <Text>...</Text>}
-                        </Box>
-
-                        {/* Metadata */}
-                        <Box marginLeft={3}>
-                          <Text color={typeColor}>{node.issue.issue_type}</Text>
-                          <Text dimColor> | </Text>
-                          <Text color={statusColor}>{node.issue.status}</Text>
-                          <Text dimColor> | P{node.issue.priority}</Text>
-                        </Box>
-
-                        {/* Dependencies */}
-                        {node.issue.blockedBy && node.issue.blockedBy.length > 0 && (
-                          <Box marginLeft={3}>
-                            <Text color="red">← Blocked by: </Text>
-                            <Text dimColor>{node.issue.blockedBy.join(', ')}</Text>
-                          </Box>
-                        )}
-
-                        {node.issue.blocks && node.issue.blocks.length > 0 && (
-                          <Box marginLeft={3}>
-                            <Text color="yellow">→ Blocks: </Text>
-                            <Text dimColor>{node.issue.blocks.join(', ')}</Text>
-                          </Box>
-                        )}
-
-                        {node.issue.children && node.issue.children.length > 0 && (
-                          <Box marginLeft={3}>
-                            <Text color="cyan">└→ Children: </Text>
-                            <Text dimColor>{node.issue.children.join(', ')}</Text>
-                          </Box>
-                        )}
+                      <Box key={node.issue.id} marginLeft={2}>
+                        <Text color={theme.colors.primary}>{gutter}</Text>
+                        <Text color={theme.colors.textDim}>{idStr}</Text>
+                        <Text bold={isSelected} color={isSelected ? theme.colors.primary : theme.colors.text}>
+                          {title}
+                        </Text>
+                        <Box flexGrow={1} />
+                        <Text color={typeColor}>{node.issue.issue_type} </Text>
+                        <Text color={statusColor}>{node.issue.displayStatus} </Text>
+                        <Text color={priorityColor}>P{node.issue.priority}</Text>
+                        {nBlockedBy > 0 && <Text color={theme.colors.statusBlocked}> ⊘{nBlockedBy}</Text>}
+                        {nBlocks > 0 && <Text color={theme.colors.warning}> →{nBlocks}</Text>}
+                        {nChildren > 0 && <Text color={theme.colors.accent}> ↳{nChildren}</Text>}
                       </Box>
                     );
                   })}
                 </Box>
-              </Box>
-            );
-          })}
+              );
+            })}
 
-          {/* Scroll indicators */}
-          {scrollOffset > 0 && (
-            <Text dimColor>↑ More above...</Text>
-          )}
-          {scrollOffset + itemsPerPage < flatNodes.length && (
-            <Text dimColor>↓ More below...</Text>
-          )}
+            <Box marginTop={1} justifyContent="space-between">
+              <Text color={theme.colors.warning}>{scrollOffset > 0 ? `↑ ${scrollOffset} above` : ''}</Text>
+              <Text color={theme.colors.warning}>
+                {scrollOffset + itemsPerPage < flatNodes.length
+                  ? `↓ ${flatNodes.length - (scrollOffset + itemsPerPage)} below`
+                  : ''}
+              </Text>
+            </Box>
           </Box>
         )}
       </Box>
 
       {/* Legend */}
-      <Box borderStyle="single" borderColor="gray" paddingX={1} flexDirection="column">
-        <Text dimColor>Legend:</Text>
-        <Box gap={2}>
-          <Text color="red">← Blocked by</Text>
-          <Text color="yellow">→ Blocks</Text>
-          <Text color="cyan">└→ Children</Text>
-        </Box>
+      <Box paddingX={1} gap={2}>
+        <Text color={theme.colors.primary}>▸ selected</Text>
+        <Text color={theme.colors.statusBlocked}>⊘ blocked by</Text>
+        <Text color={theme.colors.warning}>→ blocks</Text>
+        <Text color={theme.colors.accent}>↳ children</Text>
       </Box>
 
       {/* Footer */}

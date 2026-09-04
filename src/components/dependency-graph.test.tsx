@@ -48,7 +48,7 @@ async function renderGraph(rows: number, data = normalizeBeads([
 }
 
 test('dependency graph renders when input order initially creates a sparse level array', async () => {
-  expect(await renderGraph(15)).toContain('BD TUI - Dependency Graph - Interactive');
+  expect(await renderGraph(15)).toContain('BD TUI - Dependency Graph');
 });
 
 test('dependency graph renders its empty state in a narrow supported terminal', async () => {
