@@ -92,6 +92,11 @@ export function CommandBar() {
         setViewMode('stats');
         return { success: true, message: 'Stats view' };
 
+      case 'list':
+      case 'l':
+        setViewMode('list');
+        return { success: true, message: 'List view' };
+
       // Theme
       case 'theme':
         if (args[0]) {

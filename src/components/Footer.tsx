@@ -5,7 +5,7 @@ import { getTheme } from '../themes/themes';
 import { VIEW_NAMES } from '../utils/constants';
 
 interface FooterProps {
-  currentView: 'kanban' | 'tree' | 'graph' | 'stats';
+  currentView: 'kanban' | 'tree' | 'graph' | 'stats' | 'list';
 }
 
 export const FOOTER_PRIMARY_SHORTCUTS = '/ search | f filter | Enter/Space details | : cmd';
@@ -25,6 +25,7 @@ export function Footer({ currentView }: FooterProps) {
     { key: 'tree', num: '2', name: VIEW_NAMES.tree },
     { key: 'graph', num: '3', name: VIEW_NAMES.graph },
     { key: 'stats', num: '4', name: VIEW_NAMES.stats },
+    { key: 'list', num: '5', name: VIEW_NAMES.list },
   ];
 
   return (

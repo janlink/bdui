@@ -42,8 +42,8 @@ interface BeadsStore {
   itemsPerPage: number;
 
   // UI state
-  viewMode: 'kanban' | 'tree' | 'graph' | 'stats' | 'create-issue' | 'edit-issue';
-  previousView: 'kanban' | 'tree' | 'graph' | 'stats';
+  viewMode: 'kanban' | 'tree' | 'graph' | 'stats' | 'list' | 'create-issue' | 'edit-issue';
+  previousView: 'kanban' | 'tree' | 'graph' | 'stats' | 'list';
   showHelp: boolean;
   showDetails: boolean;
   showSearch: boolean;
@@ -103,7 +103,7 @@ interface BeadsStore {
   toggleJumpToPage: () => void;
   setTheme: (theme: string) => void;
   clearFilters: () => void;
-  setViewMode: (mode: 'kanban' | 'tree' | 'graph' | 'stats' | 'create-issue' | 'edit-issue') => void;
+  setViewMode: (mode: 'kanban' | 'tree' | 'graph' | 'stats' | 'list' | 'create-issue' | 'edit-issue') => void;
   navigateToCreateIssue: () => void;
   navigateToEditIssue: () => void;
   returnToPreviousView: () => void;

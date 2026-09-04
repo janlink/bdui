@@ -49,6 +49,7 @@ export const VIEW_NAMES: Record<string, string> = {
   tree: 'Tree',
   graph: 'Graph',
   stats: 'Stats',
+  list: 'List',
 };
 
 // Helper function to get priority color from theme

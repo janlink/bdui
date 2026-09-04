@@ -259,6 +259,9 @@ export function App() {
     if (input === '4') {
       setViewMode('stats');
     }
+    if (input === '5') {
+      setViewMode('list');
+    }
 
     // Arrow keys scroll the description while details are open. Vim keys still
     // change selection, so users can inspect another issue without closing it.
