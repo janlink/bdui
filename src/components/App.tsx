@@ -212,12 +212,6 @@ export function App() {
       return;
     }
 
-    // Jump to first (Home or gg)
-    if (input === 'G') {
-      jumpToLast();
-      return;
-    }
-
     // Create new issue
     if (input === 'N') { // Shift+N
       navigateToCreateIssue();
@@ -275,29 +269,32 @@ export function App() {
       setViewMode('stats');
     }
 
-    // Arrow keys scroll the description while details are open. Vim keys still
-    // change selection, so users can inspect another issue without closing it.
-    if ((!showDetails && key.upArrow) || input === 'k') {
-      moveUp();
-    }
-    if ((!showDetails && key.downArrow) || input === 'j') {
-      moveDown();
-    }
-    if ((!showDetails && key.leftArrow) || input === 'h') {
-      moveLeft();
-    }
-    if ((!showDetails && key.rightArrow) || input === 'l') {
-      moveRight();
-    }
-
-    // Home/End for first/last
-    // Note: Ink doesn't have built-in home/end key detection,
-    // so we use 0 and $ as vim alternatives
-    if (input === '0') {
-      jumpToFirst();
-    }
-    if (input === '$') {
-      jumpToLast();
+    // Only Kanban keeps selection in the store. List/tree/graph own their
+    // navigation locally, so routing these keys through the store there would
+    // trigger a wasted full-board re-render on every keypress.
+    if (viewMode === 'kanban') {
+      if (input === 'G' || input === '$') {
+        jumpToLast();
+        return;
+      }
+      if (input === '0') {
+        jumpToFirst();
+        return;
+      }
+      // Arrow keys scroll the description while details are open. Vim keys still
+      // change selection, so users can inspect another issue without closing it.
+      if ((!showDetails && key.upArrow) || input === 'k') {
+        moveUp();
+      }
+      if ((!showDetails && key.downArrow) || input === 'j') {
+        moveDown();
+      }
+      if ((!showDetails && key.leftArrow) || input === 'h') {
+        moveLeft();
+      }
+      if ((!showDetails && key.rightArrow) || input === 'l') {
+        moveRight();
+      }
     }
   });
 
