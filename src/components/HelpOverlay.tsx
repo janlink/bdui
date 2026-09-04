@@ -48,8 +48,9 @@ export function HelpOverlay() {
           <Text bold color={theme.colors.warning}>Search & Filter:</Text>
           <Text>  <Text color={theme.colors.primary}>/</Text>              Open search</Text>
           <Text>  <Text color={theme.colors.primary}>f</Text>              Open filter panel</Text>
+          <Text>  <Text color={theme.colors.primary}>v</Text>              Choose which statuses are shown</Text>
           <Text>  <Text color={theme.colors.primary}>c</Text>              Clear all filters and search</Text>
-          <Text color={theme.colors.textDim}>  (Filters apply across all views including Stats)</Text>
+          <Text color={theme.colors.textDim}>  (Closed is hidden by default; children of a shown parent stay visible)</Text>
         </Box>
 
         <Box flexDirection="column" gap={0} marginTop={1}>

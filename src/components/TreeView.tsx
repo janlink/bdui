@@ -1,104 +1,18 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useEffect } from 'react';
 import { Box, Text, useInput } from 'ink';
 import { useBeadsStore } from '../state/store';
 import { getTheme } from '../themes/themes';
 import { getTypeColor, getStatusColor, getPriorityColor } from '../utils/constants';
+import { buildVisibleTree, flattenTree } from '../utils/tree';
+import { computeVisibleIds } from '../utils/visibility';
 import { DetailPanel } from './DetailPanel';
 import { Footer, getFooterHeight } from './Footer';
-import type { Issue, BeadsData } from '../types';
-
-interface TreeNode {
-  issue: Issue;
-  children: TreeNode[];
-  depth: number;
-}
-
-interface FlatNode {
-  issue: Issue;
-  depth: number;
-  isLast: boolean;
-  prefix: string;
-}
+import type { BeadsData } from '../types';
 
 interface TreeViewProps {
   data: BeadsData;
   terminalWidth: number;
   terminalHeight: number;
-}
-
-function buildTree(data: BeadsData): TreeNode[] {
-  const { byId } = data;
-  const roots: TreeNode[] = [];
-  const processed = new Set<string>();
-
-  // Find root issues (no parent or parent doesn't exist)
-  const rootIssues = data.issues.filter(issue =>
-    !issue.parent || !byId.has(issue.parent)
-  );
-
-  function buildNode(issue: Issue, depth: number): TreeNode {
-    processed.add(issue.id);
-
-    const node: TreeNode = {
-      issue,
-      children: [],
-      depth,
-    };
-
-    // Add children
-    if (issue.children) {
-      for (const childId of issue.children) {
-        const child = byId.get(childId);
-        if (child && !processed.has(childId)) {
-          node.children.push(buildNode(child, depth + 1));
-        }
-      }
-    }
-
-    return node;
-  }
-
-  for (const rootIssue of rootIssues) {
-    if (!processed.has(rootIssue.id)) {
-      roots.push(buildNode(rootIssue, 0));
-    }
-  }
-
-  return roots;
-}
-
-function flattenTree(roots: TreeNode[]): FlatNode[] {
-  const flat: FlatNode[] = [];
-
-  function traverse(
-    node: TreeNode,
-    prefix: string,
-    isLast: boolean,
-    parentIsLast: boolean[] = []
-  ) {
-    flat.push({
-      issue: node.issue,
-      depth: node.depth,
-      isLast,
-      prefix,
-    });
-
-    // Process children
-    for (let i = 0; i < node.children.length; i++) {
-      const child = node.children[i];
-      const childIsLast = i === node.children.length - 1;
-      const verticalLine = isLast ? '   ' : '│  ';
-      const newPrefix = prefix + verticalLine;
-
-      traverse(child, newPrefix, childIsLast, [...parentIsLast, isLast]);
-    }
-  }
-
-  for (let i = 0; i < roots.length; i++) {
-    traverse(roots[i], '', i === roots.length - 1);
-  }
-
-  return flat;
 }
 
 export function TreeView({ data, terminalWidth, terminalHeight }: TreeViewProps) {
@@ -109,13 +23,24 @@ export function TreeView({ data, terminalWidth, terminalHeight }: TreeViewProps)
   const navigateToEditIssue = useBeadsStore(state => state.navigateToEditIssue);
   const currentTheme = useBeadsStore(state => state.currentTheme);
   const theme = getTheme(currentTheme);
+  const statusVisibility = useBeadsStore(state => state.statusVisibility);
+  const showVisibilityPanel = useBeadsStore(state => state.showVisibilityPanel);
 
-  const tree = useMemo(() => buildTree(data), [data]);
+  const visibleIds = useMemo(() => computeVisibleIds(data, statusVisibility), [data, statusVisibility]);
+  const tree = useMemo(() => buildVisibleTree(data, visibleIds), [data, visibleIds]);
   const flatNodes = useMemo(() => flattenTree(tree), [tree]);
 
   const itemsPerPage = Math.max(terminalHeight - 5 - getFooterHeight(), 5);
 
+  useEffect(() => {
+    if (selectedIndex > flatNodes.length - 1) {
+      setSelectedIndex(Math.max(0, flatNodes.length - 1));
+      setScrollOffset(0);
+    }
+  }, [flatNodes.length]);
+
   useInput((input, key) => {
+    if (showVisibilityPanel) return;
     // Navigation
     if ((!showDetails && key.upArrow) || input === 'k') {
       if (selectedIndex > 0) {

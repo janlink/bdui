@@ -3,12 +3,13 @@ import { Box, Text } from 'ink';
 import { useBeadsStore } from '../state/store';
 import { getTheme } from '../themes/themes';
 import { VIEW_NAMES } from '../utils/constants';
+import { STATUS_KEYS, STATUS_LABELS } from '../utils/visibility';
 
 interface FooterProps {
   currentView: 'kanban' | 'tree' | 'graph' | 'stats' | 'list';
 }
 
-export const FOOTER_PRIMARY_SHORTCUTS = '/ search | f filter | Enter/Space details | : cmd';
+export const FOOTER_PRIMARY_SHORTCUTS = '/ search | f filter | v show | Enter/Space details | : cmd';
 
 /** Border plus three fixed shortcut rows. */
 export function getFooterHeight(): number {
@@ -18,7 +19,10 @@ export function getFooterHeight(): number {
 export function Footer({ currentView }: FooterProps) {
   const currentTheme = useBeadsStore(state => state.currentTheme);
   const notificationsEnabled = useBeadsStore(state => state.notificationsEnabled);
+  const statusVisibility = useBeadsStore(state => state.statusVisibility);
   const theme = getTheme(currentTheme);
+
+  const hiddenLabels = STATUS_KEYS.filter(key => !statusVisibility[key]).map(key => STATUS_LABELS[key]);
 
   const views = [
     { key: 'kanban', num: '1', name: VIEW_NAMES.kanban },
@@ -51,6 +55,9 @@ export function Footer({ currentView }: FooterProps) {
       </Box>
       <Box justifyContent="space-between" width="100%">
         <Text color={theme.colors.textDim}>? help | q quit</Text>
+        {hiddenLabels.length > 0 && (
+          <Text color={theme.colors.warning}>⚑ hidden: {hiddenLabels.join(', ')}</Text>
+        )}
         <Text color={notificationsEnabled ? theme.colors.success : theme.colors.textDim}>
           n:{notificationsEnabled ? 'ON' : 'off'}
         </Text>

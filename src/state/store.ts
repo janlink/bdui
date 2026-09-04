@@ -2,8 +2,15 @@ import { create } from 'zustand';
 import type { BeadsData, Issue } from '../types';
 import { detectStatusChanges, notifyStatusChange } from '../utils/notifications';
 import { LAYOUT } from '../utils/constants';
+import {
+  STATUS_KEYS,
+  DEFAULT_STATUS_VISIBILITY,
+  statusCategory,
+  isStatusVisible,
+  type StatusKey,
+  type StatusVisibility,
+} from '../utils/visibility';
 
-type StatusKey = 'open' | 'closed' | 'in_progress' | 'blocked' | 'other';
 type VisibleColumns = Record<StatusKey, Issue[]>;
 
 interface ColumnState {
@@ -51,6 +58,7 @@ interface BeadsStore {
   showExportDialog: boolean;
   showThemeSelector: boolean;
   showJumpToPage: boolean;
+  showVisibilityPanel: boolean;
   showConfirmDialog: boolean;
   confirmDialogData: {
     title: string;
@@ -75,10 +83,16 @@ interface BeadsStore {
     priority?: number;
   };
 
+  // Which presentation-status categories are shown (closed hidden by default).
+  statusVisibility: StatusVisibility;
+
   // Actions
   setData: (data: BeadsData) => void;
   setReloadCallback: (callback: (() => void) | null) => void;
   setFilter: (filter: BeadsStore['filter']) => void;
+  toggleStatusVisibility: (key: StatusKey) => void;
+  resetStatusVisibility: () => void;
+  toggleVisibilityPanel: () => void;
   getFilteredIssues: () => Issue[];
   getVisibleColumns: () => VisibleColumns;
   setTerminalSize: (width: number, height: number) => void;
@@ -126,10 +140,15 @@ interface BeadsStore {
   clearUndoHistory: () => void;
 }
 
-const STATUS_KEYS: StatusKey[] = ['open', 'in_progress', 'blocked', 'closed', 'other'];
-
-function filterIssues(data: BeadsData, filter: BeadsStore['filter'], searchQuery: string): Issue[] {
+function filterIssues(
+  data: BeadsData,
+  filter: BeadsStore['filter'],
+  searchQuery: string,
+  statusVisibility: StatusVisibility,
+): Issue[] {
   let issues = data.issues;
+
+  issues = issues.filter(issue => isStatusVisible(issue, statusVisibility));
 
   if (searchQuery.trim()) {
     const query = searchQuery.toLowerCase();
@@ -152,8 +171,7 @@ function filterIssues(data: BeadsData, filter: BeadsStore['filter'], searchQuery
 function groupVisibleIssues(issues: Issue[]): VisibleColumns {
   const columns: VisibleColumns = { open: [], in_progress: [], blocked: [], closed: [], other: [] };
   for (const issue of issues) {
-    const statusKey = issue.displayStatus in columns ? issue.displayStatus as StatusKey : 'other';
-    columns[statusKey].push(issue);
+    columns[statusCategory(issue)].push(issue);
   }
   return columns;
 }
@@ -209,6 +227,7 @@ export const useBeadsStore = create<BeadsStore>((set, get) => ({
   showExportDialog: false,
   showThemeSelector: false,
   showJumpToPage: false,
+  showVisibilityPanel: false,
   showConfirmDialog: false,
   confirmDialogData: null,
   currentTheme: 'default',
@@ -223,6 +242,8 @@ export const useBeadsStore = create<BeadsStore>((set, get) => ({
   maxUndoHistory: 10,
 
   filter: {},
+
+  statusVisibility: { ...DEFAULT_STATUS_VISIBILITY },
 
   setTerminalSize: (width, height) => {
     const uiOverhead = LAYOUT.uiOverhead;
@@ -252,7 +273,7 @@ export const useBeadsStore = create<BeadsStore>((set, get) => ({
       }
     }
 
-    const visibleColumns = groupVisibleIssues(filterIssues(data, state.filter, state.searchQuery));
+    const visibleColumns = groupVisibleIssues(filterIssues(data, state.filter, state.searchQuery, state.statusVisibility));
     const newColumnStates = { ...state.columnStates };
     for (const statusKey of STATUS_KEYS) {
       const issueCount = visibleColumns[statusKey].length;
@@ -275,9 +296,21 @@ export const useBeadsStore = create<BeadsStore>((set, get) => ({
 
   setFilter: (filter) => set({ filter, columnStates: resetColumnStates() }),
 
+  toggleStatusVisibility: (key) => set(state => ({
+    statusVisibility: { ...state.statusVisibility, [key]: !state.statusVisibility[key] },
+    columnStates: resetColumnStates(),
+  })),
+
+  resetStatusVisibility: () => set({
+    statusVisibility: { ...DEFAULT_STATUS_VISIBILITY },
+    columnStates: resetColumnStates(),
+  }),
+
+  toggleVisibilityPanel: () => set(state => ({ showVisibilityPanel: !state.showVisibilityPanel })),
+
   getFilteredIssues: () => {
-    const { data, filter, searchQuery } = get();
-    return filterIssues(data, filter, searchQuery);
+    const { data, filter, searchQuery, statusVisibility } = get();
+    return filterIssues(data, filter, searchQuery, statusVisibility);
   },
 
   getVisibleColumns: () => {
@@ -318,7 +351,13 @@ export const useBeadsStore = create<BeadsStore>((set, get) => ({
             selectedIndex: issueIndex,
             scrollOffset: Math.floor(issueIndex / itemsPerPage) * itemsPerPage,
           };
-          set({ selectedColumn: colIndex, columnStates, searchQuery: '', filter: {} });
+          set(state => ({
+            selectedColumn: colIndex,
+            columnStates,
+            searchQuery: '',
+            filter: {},
+            statusVisibility: { ...state.statusVisibility, [statusKey]: true },
+          }));
           return true;
         }
       }

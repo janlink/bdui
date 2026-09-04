@@ -1,50 +1,18 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useEffect } from 'react';
 import { Box, Text, useInput } from 'ink';
 import { useBeadsStore } from '../state/store';
 import { getTheme } from '../themes/themes';
 import { getTypeColor, getStatusColor, getPriorityColor } from '../utils/constants';
+import { buildVisibleTree, flattenList } from '../utils/tree';
+import { computeVisibleIds } from '../utils/visibility';
 import { DetailPanel } from './DetailPanel';
 import { Footer, getFooterHeight } from './Footer';
 import type { Issue, BeadsData } from '../types';
-
-interface FlatNode {
-  issue: Issue;
-  depth: number;
-  isLast: boolean;
-  prefix: string;
-}
 
 interface ListViewProps {
   data: BeadsData;
   terminalWidth: number;
   terminalHeight: number;
-}
-
-function flatten(data: BeadsData): FlatNode[] {
-  const { byId } = data;
-  const processed = new Set<string>();
-  const flat: FlatNode[] = [];
-
-  const roots = data.issues.filter(issue => !issue.parent || !byId.has(issue.parent));
-
-  function traverse(issue: Issue, depth: number, isLast: boolean, prefix: string) {
-    if (processed.has(issue.id)) return;
-    processed.add(issue.id);
-
-    flat.push({ issue, depth, isLast, prefix });
-
-    const children = (issue.children ?? [])
-      .map(id => byId.get(id))
-      .filter((c): c is Issue => !!c && !processed.has(c.id));
-
-    const childPrefix = prefix + (depth === 0 ? '' : isLast ? '   ' : '│  ');
-    children.forEach((child, i) =>
-      traverse(child, depth + 1, i === children.length - 1, childPrefix),
-    );
-  }
-
-  roots.forEach((root, i) => traverse(root, 0, i === roots.length - 1, ''));
-  return flat;
 }
 
 // bd list-style status glyphs. Blocked is a presentation status, so it wins
@@ -68,12 +36,24 @@ export function ListView({ data, terminalWidth, terminalHeight }: ListViewProps)
   const navigateToEditIssue = useBeadsStore(state => state.navigateToEditIssue);
   const currentTheme = useBeadsStore(state => state.currentTheme);
   const theme = getTheme(currentTheme);
+  const statusVisibility = useBeadsStore(state => state.statusVisibility);
+  const showVisibilityPanel = useBeadsStore(state => state.showVisibilityPanel);
 
-  const flatNodes = useMemo(() => flatten(data), [data]);
+  const visibleIds = useMemo(() => computeVisibleIds(data, statusVisibility), [data, statusVisibility]);
+  const tree = useMemo(() => buildVisibleTree(data, visibleIds), [data, visibleIds]);
+  const flatNodes = useMemo(() => flattenList(tree), [tree]);
 
   const itemsPerPage = Math.max(terminalHeight - 6 - getFooterHeight(), 5);
 
+  useEffect(() => {
+    if (selectedIndex > flatNodes.length - 1) {
+      setSelectedIndex(Math.max(0, flatNodes.length - 1));
+      setScrollOffset(0);
+    }
+  }, [flatNodes.length]);
+
   useInput((input, key) => {
+    if (showVisibilityPanel) return;
     if ((!showDetails && key.upArrow) || input === 'k') {
       if (selectedIndex > 0) {
         const newIndex = selectedIndex - 1;

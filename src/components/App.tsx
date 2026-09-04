@@ -115,6 +115,8 @@ export function App() {
   const showExportDialog = useBeadsStore(state => state.showExportDialog);
   const showThemeSelector = useBeadsStore(state => state.showThemeSelector);
   const showJumpToPage = useBeadsStore(state => state.showJumpToPage);
+  const showVisibilityPanel = useBeadsStore(state => state.showVisibilityPanel);
+  const toggleVisibilityPanel = useBeadsStore(state => state.toggleVisibilityPanel);
   const showConfirmDialog = useBeadsStore(state => state.showConfirmDialog);
   const showToast = useBeadsStore(state => state.showToast);
   const undo = useBeadsStore(state => state.undo);
@@ -152,7 +154,7 @@ export function App() {
     }
 
     // If modals are active, let those components handle input
-    if (showSearch || showFilter || showExportDialog || showThemeSelector || showJumpToPage) {
+    if (showSearch || showFilter || showExportDialog || showThemeSelector || showJumpToPage || showVisibilityPanel) {
       return;
     }
 
@@ -233,6 +235,12 @@ export function App() {
     // Theme selector
     if (input === 't') {
       toggleThemeSelector();
+      return;
+    }
+
+    // Visibility panel (choose which statuses are shown)
+    if (input === 'v') {
+      toggleVisibilityPanel();
       return;
     }
 

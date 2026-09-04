@@ -28,6 +28,8 @@ export function CommandBar() {
   const navigateToEditIssue = useBeadsStore(state => state.navigateToEditIssue);
   const clearFilters = useBeadsStore(state => state.clearFilters);
   const toggleHelp = useBeadsStore(state => state.toggleHelp);
+  const toggleVisibilityPanel = useBeadsStore(state => state.toggleVisibilityPanel);
+  const resetStatusVisibility = useBeadsStore(state => state.resetStatusVisibility);
   const currentTheme = useBeadsStore(state => state.currentTheme);
   const theme = getTheme(currentTheme);
 
@@ -96,6 +98,15 @@ export function CommandBar() {
       case 'l':
         setViewMode('list');
         return { success: true, message: 'List view' };
+
+      case 'show':
+      case 'visibility':
+        toggleVisibilityPanel();
+        return { success: true, message: 'Status visibility' };
+
+      case 'showall':
+        resetStatusVisibility();
+        return { success: true, message: 'Status visibility reset' };
 
       // Theme
       case 'theme':

@@ -8,6 +8,7 @@ import { HelpOverlay } from './HelpOverlay';
 import { TreeView } from './TreeView';
 import { DependencyGraph } from './DependencyGraph';
 import { ListView } from './ListView';
+import { VisibilityPanel } from './VisibilityPanel';
 import { SearchInput } from './SearchInput';
 import { FilterPanel } from './FilterPanel';
 import { CreateIssueForm } from './CreateIssueForm';
@@ -212,6 +213,8 @@ function KanbanView() {
 export function Board() {
   const viewMode = useBeadsStore(state => state.viewMode);
   const showHelp = useBeadsStore(state => state.showHelp);
+  const showVisibilityPanel = useBeadsStore(state => state.showVisibilityPanel);
+  const toggleVisibilityPanel = useBeadsStore(state => state.toggleVisibilityPanel);
   const data = useBeadsStore(state => state.data);
   const terminalWidth = useBeadsStore(state => state.terminalWidth);
   const terminalHeight = useBeadsStore(state => state.terminalHeight);
@@ -292,6 +295,17 @@ export function Board() {
             if (reloadCallback) reloadCallback();
           }}
         />
+      )}
+
+      {/* Visibility panel - shared across all views */}
+      {showVisibilityPanel && (
+        <Box
+          position="absolute"
+          marginTop={Math.max(0, Math.floor(terminalHeight / 2) - 6)}
+          marginLeft={Math.max(0, Math.floor(terminalWidth / 2) - 24)}
+        >
+          <VisibilityPanel onClose={toggleVisibilityPanel} />
+        </Box>
       )}
 
       {/* Help overlay - shared across all views */}

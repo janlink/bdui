@@ -1,8 +1,9 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useEffect } from 'react';
 import { Box, Text, useInput } from 'ink';
 import { useBeadsStore } from '../state/store';
 import { getTheme } from '../themes/themes';
 import { getTypeColor, getStatusColor, getPriorityColor } from '../utils/constants';
+import { isStatusVisible, type StatusVisibility } from '../utils/visibility';
 import { DetailPanel } from './DetailPanel';
 import { Footer, getFooterHeight } from './Footer';
 import type { Issue, BeadsData } from '../types';
@@ -19,7 +20,7 @@ interface GraphNode {
   column: number;
 }
 
-function buildDependencyLevels(data: BeadsData): GraphNode[][] {
+function buildDependencyLevels(data: BeadsData, visibility: StatusVisibility): GraphNode[][] {
   const { byId } = data;
   const levels: GraphNode[][] = [];
   const processed = new Set<string>();
@@ -58,13 +59,14 @@ function buildDependencyLevels(data: BeadsData): GraphNode[][] {
     return maxDepLevel;
   }
 
-  // Calculate levels for all issues with dependencies
+  // Calculate levels for all visible issues with dependencies
   const issuesWithDeps = data.issues.filter(
     issue =>
-      (issue.blockedBy && issue.blockedBy.length > 0) ||
+      isStatusVisible(issue, visibility) &&
+      ((issue.blockedBy && issue.blockedBy.length > 0) ||
       (issue.blocks && issue.blocks.length > 0) ||
       (issue.parent) ||
-      (issue.children && issue.children.length > 0)
+      (issue.children && issue.children.length > 0))
   );
 
   for (const issue of issuesWithDeps) {
@@ -88,14 +90,24 @@ export function DependencyGraph({ data, terminalWidth, terminalHeight }: Depende
 
   const currentTheme = useBeadsStore(state => state.currentTheme);
   const theme = getTheme(currentTheme);
+  const statusVisibility = useBeadsStore(state => state.statusVisibility);
+  const showVisibilityPanel = useBeadsStore(state => state.showVisibilityPanel);
 
-  const levels = useMemo(() => buildDependencyLevels(data), [data]);
+  const levels = useMemo(() => buildDependencyLevels(data, statusVisibility), [data, statusVisibility]);
   const flatNodes = useMemo(() => levels.flat(), [levels]);
 
   // Dense one-line nodes; leave room for header, per-level labels, legend and footer.
   const itemsPerPage = Math.max(terminalHeight - 11 - getFooterHeight(), 5);
 
+  useEffect(() => {
+    if (selectedIndex > flatNodes.length - 1) {
+      setSelectedIndex(Math.max(0, flatNodes.length - 1));
+      setScrollOffset(0);
+    }
+  }, [flatNodes.length]);
+
   useInput((input, key) => {
+    if (showVisibilityPanel) return;
     // Navigation
     if ((!showDetails && key.upArrow) || input === 'k') {
       if (selectedIndex > 0) {
