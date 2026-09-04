@@ -193,7 +193,7 @@ export function TreeView({ data, terminalWidth, terminalHeight }: TreeViewProps)
               const priorityColor = getPriorityColor(node.issue.priority, theme);
               const isBlocked = !!(node.issue.blockedBy && node.issue.blockedBy.length > 0);
 
-              const gutter = isSelected ? '▶ ' : '  ';
+              const gutter = isSelected ? '▸ ' : '  ';
               const branch = `${node.prefix}${connector} `;
               const meta = ` ${node.issue.id} ${node.issue.issue_type} ${node.issue.displayStatus} P${node.issue.priority}${isBlocked ? ' [!]' : '    '}`;
               const titleWidth = Math.max(4, terminalWidth - gutter.length - branch.length - meta.length - 2);
