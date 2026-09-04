@@ -1,6 +1,8 @@
 import React, { useState, useMemo } from 'react';
 import { Box, Text, useInput } from 'ink';
 import { useBeadsStore } from '../state/store';
+import { getTheme } from '../themes/themes';
+import { getTypeColor, getStatusColor, getPriorityColor } from '../utils/constants';
 import { DetailPanel } from './DetailPanel';
 import { Footer, getFooterHeight } from './Footer';
 import type { Issue, BeadsData } from '../types';
@@ -105,11 +107,13 @@ export function TreeView({ data, terminalWidth, terminalHeight }: TreeViewProps)
   const showDetails = useBeadsStore(state => state.showDetails);
   const selectIssueById = useBeadsStore(state => state.selectIssueById);
   const navigateToEditIssue = useBeadsStore(state => state.navigateToEditIssue);
+  const currentTheme = useBeadsStore(state => state.currentTheme);
+  const theme = getTheme(currentTheme);
 
   const tree = useMemo(() => buildTree(data), [data]);
   const flatNodes = useMemo(() => flattenTree(tree), [tree]);
 
-  const itemsPerPage = Math.max(Math.floor((terminalHeight - 10) / 3), 5);
+  const itemsPerPage = Math.max(terminalHeight - 5 - getFooterHeight(), 5);
 
   useInput((input, key) => {
     // Navigation
@@ -155,32 +159,17 @@ export function TreeView({ data, terminalWidth, terminalHeight }: TreeViewProps)
   const selectedIssue = flatNodes[selectedIndex]?.issue;
   const visibleNodes = flatNodes.slice(scrollOffset, scrollOffset + itemsPerPage);
 
-  const typeColors: Record<string, string> = {
-    epic: 'magenta',
-    task: 'blue',
-    bug: 'red',
-    feature: 'green',
-    chore: 'gray',
-  };
-
-  const statusColors: Record<string, string> = {
-    open: 'blue',
-    in_progress: 'yellow',
-    blocked: 'red',
-    closed: 'green',
-  };
-
   return (
     <Box flexDirection="column" width="100%">
       {/* Header */}
       <Box marginBottom={1} flexDirection="column">
-        <Text bold color="cyan">
-          BD TUI - Tree View (Hierarchical) - Interactive
+        <Text bold color={theme.colors.primary}>
+          BD TUI - Tree View (Hierarchical)
         </Text>
         <Box gap={2}>
-          <Text dimColor>Total: <Text color="white">{data.stats.total}</Text></Text>
-          <Text dimColor>Root Issues: <Text color="white">{tree.length}</Text></Text>
-          <Text dimColor>Selected: <Text color="cyan">{selectedIndex + 1}/{flatNodes.length}</Text></Text>
+          <Text color={theme.colors.textDim}>Total: <Text color={theme.colors.text}>{data.stats.total}</Text></Text>
+          <Text color={theme.colors.textDim}>Roots: <Text color={theme.colors.text}>{tree.length}</Text></Text>
+          <Text color={theme.colors.textDim}>Selected: <Text color={theme.colors.primary}>{selectedIndex + 1}/{flatNodes.length}</Text></Text>
         </Box>
       </Box>
 
@@ -194,38 +183,48 @@ export function TreeView({ data, terminalWidth, terminalHeight }: TreeViewProps)
             />
           </Box>
         ) : (
-          <Box flexDirection="column">
+          <Box flexDirection="column" width={terminalWidth}>
             {visibleNodes.map((node, idx) => {
               const globalIndex = scrollOffset + idx;
               const isSelected = globalIndex === selectedIndex;
-              const connector = node.isLast ? '└──' : '├──';
-              const typeColor = typeColors[node.issue.issue_type] || 'white';
-              const statusColor = statusColors[node.issue.status] || 'white';
+              const connector = node.isLast ? '└─' : '├─';
+              const typeColor = getTypeColor(node.issue.issue_type, theme);
+              const statusColor = getStatusColor(node.issue.displayStatus, theme);
+              const priorityColor = getPriorityColor(node.issue.priority, theme);
+              const isBlocked = !!(node.issue.blockedBy && node.issue.blockedBy.length > 0);
+
+              const gutter = isSelected ? '▶ ' : '  ';
+              const branch = `${node.prefix}${connector} `;
+              const meta = ` ${node.issue.id} ${node.issue.issue_type} ${node.issue.displayStatus} P${node.issue.priority}${isBlocked ? ' [!]' : '    '}`;
+              const titleWidth = Math.max(4, terminalWidth - gutter.length - branch.length - meta.length - 2);
+              const rawTitle = node.issue.title || node.issue.id;
+              const title = rawTitle.length > titleWidth ? `${rawTitle.slice(0, titleWidth - 1)}…` : rawTitle;
 
               return (
-                <Box key={node.issue.id} flexDirection="column" marginBottom={1}>
-                  <Box backgroundColor={isSelected ? 'blue' : undefined}>
-                    <Text dimColor>{node.prefix}{connector} </Text>
-                    <Text bold color={isSelected ? 'white' : 'white'}>
-                      {node.issue.title.substring(0, 50)}
-                      {node.issue.title.length > 50 ? '...' : ''}
-                    </Text>
-                  </Box>
-                  <Box marginLeft={node.prefix.length + 4}>
-                    <Text dimColor>({node.issue.id})</Text>
-                    <Text color={typeColor}> [{node.issue.issue_type}]</Text>
-                    <Text color={statusColor}> {node.issue.status}</Text>
-                    <Text dimColor> P{node.issue.priority}</Text>
-                    {node.issue.blockedBy && node.issue.blockedBy.length > 0 && (
-                      <Text color="red"> 🚫</Text>
-                    )}
-                  </Box>
+                <Box key={node.issue.id}>
+                  <Text color={theme.colors.primary}>{gutter}</Text>
+                  <Text color={theme.colors.textDim}>{branch}</Text>
+                  <Text bold={isSelected} color={isSelected ? theme.colors.primary : theme.colors.text}>
+                    {title}
+                  </Text>
+                  <Box flexGrow={1} />
+                  <Text color={theme.colors.textDim}>{node.issue.id} </Text>
+                  <Text color={typeColor}>{node.issue.issue_type} </Text>
+                  <Text color={statusColor}>{node.issue.displayStatus} </Text>
+                  <Text color={priorityColor}>P{node.issue.priority}</Text>
+                  <Text color={theme.colors.statusBlocked} bold>{isBlocked ? ' [!]' : '    '}</Text>
                 </Box>
               );
             })}
 
-            {scrollOffset > 0 && <Text dimColor>↑ More above...</Text>}
-            {scrollOffset + itemsPerPage < flatNodes.length && <Text dimColor>↓ More below...</Text>}
+            <Box marginTop={1} justifyContent="space-between">
+              <Text color={theme.colors.warning}>{scrollOffset > 0 ? `↑ ${scrollOffset} above` : ''}</Text>
+              <Text color={theme.colors.warning}>
+                {scrollOffset + itemsPerPage < flatNodes.length
+                  ? `↓ ${flatNodes.length - (scrollOffset + itemsPerPage)} below`
+                  : ''}
+              </Text>
+            </Box>
           </Box>
         )}
       </Box>
