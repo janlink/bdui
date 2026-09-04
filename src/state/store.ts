@@ -218,8 +218,8 @@ export const useBeadsStore = create<BeadsStore>((set, get) => ({
   itemsPerPage: 10, // Will be recalculated based on terminal height
 
   // UI state
-  viewMode: 'kanban',
-  previousView: 'kanban',
+  viewMode: 'list',
+  previousView: 'list',
   showHelp: false,
   showDetails: false,
   showSearch: false,

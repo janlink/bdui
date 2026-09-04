@@ -25,11 +25,11 @@ export function Footer({ currentView }: FooterProps) {
   const hiddenLabels = STATUS_KEYS.filter(key => !statusVisibility[key]).map(key => STATUS_LABELS[key]);
 
   const views = [
-    { key: 'kanban', num: '1', name: VIEW_NAMES.kanban },
-    { key: 'tree', num: '2', name: VIEW_NAMES.tree },
-    { key: 'graph', num: '3', name: VIEW_NAMES.graph },
-    { key: 'stats', num: '4', name: VIEW_NAMES.stats },
-    { key: 'list', num: '5', name: VIEW_NAMES.list },
+    { key: 'list', num: '1', name: VIEW_NAMES.list },
+    { key: 'kanban', num: '2', name: VIEW_NAMES.kanban },
+    { key: 'tree', num: '3', name: VIEW_NAMES.tree },
+    { key: 'graph', num: '4', name: VIEW_NAMES.graph },
+    { key: 'stats', num: '5', name: VIEW_NAMES.stats },
   ];
 
   return (

@@ -256,19 +256,19 @@ export function App() {
 
     // View switching
     if (input === '1') {
-      setViewMode('kanban');
+      setViewMode('list');
     }
     if (input === '2') {
-      setViewMode('tree');
+      setViewMode('kanban');
     }
     if (input === '3') {
-      setViewMode('graph');
+      setViewMode('tree');
     }
     if (input === '4') {
-      setViewMode('stats');
+      setViewMode('graph');
     }
     if (input === '5') {
-      setViewMode('list');
+      setViewMode('stats');
     }
 
     // Arrow keys scroll the description while details are open. Vim keys still

@@ -37,11 +37,11 @@ export function HelpOverlay() {
 
         <Box flexDirection="column" gap={0} marginTop={1}>
           <Text bold color={theme.colors.warning}>Views:</Text>
-          <Text>  <Text color={theme.colors.primary}>1</Text>              Kanban board view</Text>
-          <Text>  <Text color={theme.colors.primary}>2</Text>              Tree view (hierarchical)</Text>
-          <Text>  <Text color={theme.colors.primary}>3</Text>              Dependency graph (ASCII art)</Text>
-          <Text>  <Text color={theme.colors.primary}>4</Text>              Statistics & analytics dashboard</Text>
-          <Text>  <Text color={theme.colors.primary}>5</Text>              List view (bd list style)</Text>
+          <Text>  <Text color={theme.colors.primary}>1</Text>              List view (bd list style)</Text>
+          <Text>  <Text color={theme.colors.primary}>2</Text>              Kanban board view</Text>
+          <Text>  <Text color={theme.colors.primary}>3</Text>              Tree view (hierarchical)</Text>
+          <Text>  <Text color={theme.colors.primary}>4</Text>              Dependency graph (ASCII art)</Text>
+          <Text>  <Text color={theme.colors.primary}>5</Text>              Statistics & analytics dashboard</Text>
         </Box>
 
         <Box flexDirection="column" gap={0} marginTop={1}>

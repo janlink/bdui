@@ -148,7 +148,7 @@ export function DependencyGraph({ data, terminalWidth, terminalHeight }: Depende
           <Text dimColor>No dependencies to visualize</Text>
         </Box>
         <Box marginTop={1} borderStyle="single" borderColor="gray" paddingX={1}>
-          <Text dimColor>1 kanban | 2 tree | 3 graph | ? help | q quit</Text>
+          <Text dimColor>1 list | 2 kanban | 3 tree | 4 graph | ? help | q quit</Text>
         </Box>
       </Box>
     );
