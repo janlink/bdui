@@ -1,0 +1,14 @@
+{
+  "name": "string-width",
+  "version": "8.1.0",
+  "description": "Bun-native string-width override used by Ink's render hot path",
+  "type": "module",
+  "exports": {
+    "types": "./index.d.ts",
+    "default": "./index.js"
+  },
+  "files": [
+    "index.js",
+    "index.d.ts"
+  ]
+}

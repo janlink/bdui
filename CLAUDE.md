@@ -45,6 +45,20 @@ artifacts.
 
 ## Architecture
 
+### Render hot path (`patches/string-width-bun`)
+
+Ink measures every rendered character with `string-width` on every frame. The
+published implementation segments graphemes with `Intl.Segmenter`, which costs
+about 26 µs per call under Bun and pushes a single keypress past 145 ms. A
+package override in `package.json` replaces `string-width` for the whole
+dependency tree with a shim over the native `Bun.stringWidth`, which measures
+identically for Latin, CJK, emoji, ANSI, and box-drawing text.
+
+The override is Bun-only by design and must stay listed in both `dependencies`
+and `overrides`: Bun does not materialize a `file:` override that no dependency
+declares. `src/utils/string-width.test.ts` guards both the measurements and the
+per-call cost, so a lost override fails the suite instead of the frame budget.
+
 ### Beads process boundary (`src/bd/client.ts`)
 
 `runBd()` starts `bd` with an argv array and never constructs a shell command.
