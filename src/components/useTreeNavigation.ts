@@ -1,6 +1,6 @@
 import { useState, useMemo, useEffect } from 'react';
 import { useInput } from 'ink';
-import { useBeadsStore } from '../state/store';
+import { useBeadsStore, isModalOpen } from '../state/store';
 import type { Issue } from '../types';
 import type { TreeNode, FlatNode } from '../utils/tree';
 
@@ -26,10 +26,10 @@ export function useTreeNavigation(tree: TreeNode[], flatten: Flatten, itemsPerPa
   const [nav, setNav] = useState<NavState>({ selectedIndex: 0, scrollOffset: 0 });
 
   const showDetails = useBeadsStore(state => state.showDetails);
-  const showVisibilityPanel = useBeadsStore(state => state.showVisibilityPanel);
-  const showConfirmDialog = useBeadsStore(state => state.showConfirmDialog);
+  const modalOpen = useBeadsStore(isModalOpen);
   const selectIssueById = useBeadsStore(state => state.selectIssueById);
   const navigateToEditIssue = useBeadsStore(state => state.navigateToEditIssue);
+  const toggleExportDialog = useBeadsStore(state => state.toggleExportDialog);
 
   const flatNodes = useMemo(() => flatten(tree, collapsed), [tree, flatten, collapsed]);
 
@@ -52,7 +52,7 @@ export function useTreeNavigation(tree: TreeNode[], flatten: Flatten, itemsPerPa
     setNav(prev => ({ selectedIndex: target, scrollOffset: scrollFor(target, prev.scrollOffset) }));
 
   useInput((input, key) => {
-    if (showVisibilityPanel || showConfirmDialog) return;
+    if (modalOpen) return;
 
     // Functional updates so a held arrow key accumulates every repeat event
     // instead of collapsing them into one step against a stale selectedIndex.
@@ -107,9 +107,13 @@ export function useTreeNavigation(tree: TreeNode[], flatten: Flatten, itemsPerPa
       return;
     }
 
-    if (input === 'e') {
+    // Edit and export read the store selection, so sync the row under the
+    // cursor into it first.
+    if (input === 'e' || input === 'x') {
       const issue = flatNodes[nav.selectedIndex]?.issue;
-      if (issue && selectIssueById(issue.id)) navigateToEditIssue();
+      if (!issue || !selectIssueById(issue.id)) return;
+      if (input === 'e') navigateToEditIssue();
+      else toggleExportDialog();
     }
   });
 

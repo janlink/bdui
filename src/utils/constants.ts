@@ -15,6 +15,16 @@ export const LAYOUT = {
   minTerminalHeight: 20,
 } as const;
 
+// Rows the shared chrome above a view occupies when open. Each value covers the
+// component's own content plus its border and bottom margin, so a view can
+// subtract them to size its scrollable body.
+export const CHROME_HEIGHT = {
+  filtersBanner: 4,
+  searchInput: 5,
+  filterPanel: 16,
+  commandBar: 3,
+} as const;
+
 // Beads priorities (0 is most urgent, 4 is backlog)
 export const PRIORITY_LABELS: Record<number, string> = {
   0: 'Critical',

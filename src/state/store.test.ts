@@ -1,6 +1,7 @@
 import { beforeEach, expect, test } from 'bun:test';
 import { normalizeBeads } from '../bd/parser';
-import { useBeadsStore } from './store';
+import { DEFAULT_STATUS_VISIBILITY } from '../utils/visibility';
+import { isModalOpen, useBeadsStore } from './store';
 
 function data() {
   return normalizeBeads([
@@ -25,9 +26,18 @@ beforeEach(() => {
     itemsPerPage: 1,
     searchQuery: '',
     filter: {},
+    // selectIssueById reveals the selected issue's status category, so this has
+    // to be reset or one test's lookup widens visibility for the next.
+    statusVisibility: { ...DEFAULT_STATUS_VISIBILITY },
     viewMode: 'kanban',
     previousView: 'kanban',
+    showSearch: false,
+    showFilter: false,
     showExportDialog: false,
+    showThemeSelector: false,
+    showJumpToPage: false,
+    showVisibilityPanel: false,
+    showConfirmDialog: false,
     notificationsEnabled: false,
   });
 });
@@ -100,6 +110,66 @@ test('exact ID selection wins over an earlier fuzzy match', () => {
 
   expect(useBeadsStore.getState().selectIssueById('bd-a')).toBe(true);
   expect(useBeadsStore.getState().getSelectedIssue()?.id).toBe('bd-a');
+});
+
+test('every input-owning overlay counts as an open modal', () => {
+  const flags = [
+    'showSearch', 'showFilter', 'showExportDialog',
+    'showThemeSelector', 'showJumpToPage', 'showVisibilityPanel', 'showConfirmDialog',
+  ] as const;
+
+  expect(isModalOpen(useBeadsStore.getState())).toBe(false);
+
+  for (const flag of flags) {
+    useBeadsStore.setState({ [flag]: true });
+    expect(isModalOpen(useBeadsStore.getState())).toBe(true);
+    useBeadsStore.setState({ [flag]: false });
+  }
+});
+
+test('row views keep the ancestor chain of a search match and drop its siblings', () => {
+  const store = useBeadsStore.getState();
+  store.setData(normalizeBeads([
+    { id: 'epic', title: 'Platform work', status: 'open', issue_type: 'epic', priority: 1 },
+    { id: 'epic.hit', title: 'Search target', status: 'open', issue_type: 'task', priority: 2,
+      dependencies: [{ issue_id: 'epic.hit', depends_on_id: 'epic', type: 'parent-child' }] },
+    { id: 'epic.miss', title: 'Unrelated chore', status: 'open', issue_type: 'chore', priority: 3,
+      dependencies: [{ issue_id: 'epic.miss', depends_on_id: 'epic', type: 'parent-child' }] },
+  ]));
+
+  expect([...useBeadsStore.getState().getRowVisibleIds()].sort())
+    .toEqual(['epic', 'epic.hit', 'epic.miss']);
+
+  useBeadsStore.getState().setSearchQuery('target');
+
+  expect([...useBeadsStore.getState().getRowVisibleIds()].sort()).toEqual(['epic', 'epic.hit']);
+});
+
+test('row views apply field filters alongside search', () => {
+  const store = useBeadsStore.getState();
+  store.setData(normalizeBeads([
+    { id: 'epic', title: 'Platform work', status: 'open', issue_type: 'epic', priority: 1 },
+    { id: 'epic.p0', title: 'Urgent target', status: 'open', issue_type: 'bug', priority: 0,
+      dependencies: [{ issue_id: 'epic.p0', depends_on_id: 'epic', type: 'parent-child' }] },
+    { id: 'epic.p3', title: 'Later target', status: 'open', issue_type: 'task', priority: 3,
+      dependencies: [{ issue_id: 'epic.p3', depends_on_id: 'epic', type: 'parent-child' }] },
+  ]));
+
+  useBeadsStore.getState().setFilter({ priority: 0 });
+
+  expect([...useBeadsStore.getState().getRowVisibleIds()].sort()).toEqual(['epic', 'epic.p0']);
+});
+
+test('row views never resurface an issue the status toggle hides', () => {
+  const store = useBeadsStore.getState();
+  store.setData(normalizeBeads([
+    { id: 'done', title: 'Closed target', status: 'closed', issue_type: 'task', priority: 2 },
+    { id: 'todo', title: 'Open target', status: 'open', issue_type: 'task', priority: 2 },
+  ]));
+
+  useBeadsStore.getState().setSearchQuery('target');
+
+  expect([...useBeadsStore.getState().getRowVisibleIds()]).toEqual(['todo']);
 });
 
 test('global ID selection clears filters so the selected issue remains visible', () => {

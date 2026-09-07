@@ -1,12 +1,14 @@
 import { create } from 'zustand';
 import type { BeadsData, Issue } from '../types';
 import { detectStatusChanges, notifyStatusChange } from '../utils/notifications';
-import { LAYOUT } from '../utils/constants';
+import { LAYOUT, hasActiveFilters } from '../utils/constants';
 import {
   STATUS_KEYS,
   DEFAULT_STATUS_VISIBILITY,
   statusCategory,
   isStatusVisible,
+  computeVisibleIds,
+  withAncestors,
   type StatusKey,
   type StatusVisibility,
 } from '../utils/visibility';
@@ -34,7 +36,7 @@ interface UndoEntry {
   timestamp: number;
 }
 
-interface BeadsStore {
+export interface BeadsStore {
   data: BeadsData;
   previousIssues: Map<string, Issue>; // Track previous state for notifications
   reloadCallback: (() => void) | null; // Callback to reload data from database
@@ -96,6 +98,7 @@ interface BeadsStore {
   getFilteredIssues: () => Issue[];
   getStatsIssues: () => Issue[];
   getVisibleColumns: () => VisibleColumns;
+  getRowVisibleIds: () => Set<string>;
   setTerminalSize: (width: number, height: number) => void;
 
   // Navigation actions
@@ -149,32 +152,47 @@ const ALL_STATUSES_VISIBLE: StatusVisibility = {
   other: true,
 };
 
+// Search and filter predicate without the status-visibility term, so column and
+// row views can combine it with their own notion of which statuses are shown.
+function matchesQuery(
+  issue: Issue,
+  filter: BeadsStore['filter'],
+  searchQuery: string,
+): boolean {
+  const query = searchQuery.trim().toLowerCase();
+  if (query
+    && !issue.title.toLowerCase().includes(query)
+    && !issue.description?.toLowerCase().includes(query)
+    && !issue.id.toLowerCase().includes(query)) return false;
+
+  if (filter.assignee && issue.assignee !== filter.assignee) return false;
+  if (filter.tags?.length && !issue.labels?.some(label => filter.tags?.includes(label))) return false;
+  if (filter.status && issue.displayStatus !== filter.status) return false;
+  if (filter.priority !== undefined && issue.priority !== filter.priority) return false;
+
+  return true;
+}
+
 function filterIssues(
   data: BeadsData,
   filter: BeadsStore['filter'],
   searchQuery: string,
   statusVisibility: StatusVisibility,
 ): Issue[] {
-  let issues = data.issues;
+  return data.issues.filter(issue =>
+    isStatusVisible(issue, statusVisibility) && matchesQuery(issue, filter, searchQuery));
+}
 
-  issues = issues.filter(issue => isStatusVisible(issue, statusVisibility));
-
-  if (searchQuery.trim()) {
-    const query = searchQuery.toLowerCase();
-    issues = issues.filter(issue =>
-      issue.title.toLowerCase().includes(query) ||
-      issue.description?.toLowerCase().includes(query) ||
-      issue.id.toLowerCase().includes(query)
-    );
-  }
-  if (filter.assignee) issues = issues.filter(issue => issue.assignee === filter.assignee);
-  if (filter.tags?.length) {
-    issues = issues.filter(issue => issue.labels?.some(label => filter.tags?.includes(label)));
-  }
-  if (filter.status) issues = issues.filter(issue => issue.displayStatus === filter.status);
-  if (filter.priority !== undefined) issues = issues.filter(issue => issue.priority === filter.priority);
-
-  return issues;
+// Search, filter, dialogs, and forms own keyboard input exclusively; every
+// normal-navigation handler must fall silent while one of them is mounted.
+export function isModalOpen(state: BeadsStore): boolean {
+  return state.showSearch
+    || state.showFilter
+    || state.showExportDialog
+    || state.showThemeSelector
+    || state.showJumpToPage
+    || state.showVisibilityPanel
+    || state.showConfirmDialog;
 }
 
 function groupVisibleIssues(issues: Issue[]): VisibleColumns {
@@ -331,6 +349,23 @@ export const useBeadsStore = create<BeadsStore>((set, get) => ({
 
   getVisibleColumns: () => {
     return groupVisibleIssues(get().getFilteredIssues());
+  },
+
+  // List and tree resolve status visibility hierarchically, so they cannot reuse
+  // getFilteredIssues (which applies it per issue). Search and filter are
+  // intersected with that hierarchical set, then widened by ancestor context.
+  getRowVisibleIds: () => {
+    const { data, filter, searchQuery, statusVisibility } = get();
+    const statusVisible = computeVisibleIds(data, statusVisibility);
+    if (!hasActiveFilters(filter, searchQuery)) return statusVisible;
+
+    const matched = new Set<string>();
+    for (const issue of data.issues) {
+      if (statusVisible.has(issue.id) && matchesQuery(issue, filter, searchQuery)) {
+        matched.add(issue.id);
+      }
+    }
+    return withAncestors(data, matched, statusVisible);
   },
 
   getStatusKey: () => {

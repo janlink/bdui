@@ -1,6 +1,6 @@
 import React, { useState, useMemo, useEffect } from 'react';
 import { Box, Text, useInput } from 'ink';
-import { useBeadsStore } from '../state/store';
+import { useBeadsStore, isModalOpen } from '../state/store';
 import { getTheme } from '../themes/themes';
 import { getTypeColor, getStatusColor, getPriorityColor } from '../utils/constants';
 import { isStatusVisible, type StatusVisibility } from '../utils/visibility';
@@ -87,11 +87,12 @@ export function DependencyGraph({ data, terminalWidth, terminalHeight }: Depende
   const showDetails = useBeadsStore(state => state.showDetails);
   const selectIssueById = useBeadsStore(state => state.selectIssueById);
   const navigateToEditIssue = useBeadsStore(state => state.navigateToEditIssue);
+  const toggleExportDialog = useBeadsStore(state => state.toggleExportDialog);
 
   const currentTheme = useBeadsStore(state => state.currentTheme);
   const theme = getTheme(currentTheme);
   const statusVisibility = useBeadsStore(state => state.statusVisibility);
-  const showVisibilityPanel = useBeadsStore(state => state.showVisibilityPanel);
+  const modalOpen = useBeadsStore(isModalOpen);
 
   const levels = useMemo(() => buildDependencyLevels(data, statusVisibility), [data, statusVisibility]);
   const flatNodes = useMemo(() => levels.flat(), [levels]);
@@ -107,7 +108,7 @@ export function DependencyGraph({ data, terminalWidth, terminalHeight }: Depende
   }, [flatNodes.length]);
 
   useInput((input, key) => {
-    if (showVisibilityPanel) return;
+    if (modalOpen) return;
     // Navigation
     if ((!showDetails && key.upArrow) || input === 'k') {
       if (selectedIndex > 0) {
@@ -133,10 +134,13 @@ export function DependencyGraph({ data, terminalWidth, terminalHeight }: Depende
       }
     }
 
-    // Edit selected issue
-    if (input === 'e') {
+    // Edit and export read the store selection, so sync the selected node into
+    // it first.
+    if (input === 'e' || input === 'x') {
       const issue = flatNodes[selectedIndex]?.issue;
-      if (issue && selectIssueById(issue.id)) navigateToEditIssue();
+      if (!issue || !selectIssueById(issue.id)) return;
+      if (input === 'e') navigateToEditIssue();
+      else toggleExportDialog();
     }
   });
 

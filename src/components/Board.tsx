@@ -20,23 +20,17 @@ import { Toast } from './Toast';
 import { FiltersBanner } from './FiltersBanner';
 import { ConfirmDialog } from './ConfirmDialog';
 import { CommandBar } from './CommandBar';
-import { hasActiveFilters, LAYOUT } from '../utils/constants';
+import { hasActiveFilters, CHROME_HEIGHT, LAYOUT } from '../utils/constants';
 import { Footer, getFooterHeight } from './Footer';
 
-function KanbanView() {
+function KanbanView({ height }: { height: number }) {
   const data = useBeadsStore(state => state.data);
   const selectedColumn = useBeadsStore(state => state.selectedColumn);
   const columnStates = useBeadsStore(state => state.columnStates);
   const itemsPerPage = useBeadsStore(state => state.itemsPerPage);
   const showDetails = useBeadsStore(state => state.showDetails);
-  const showSearch = useBeadsStore(state => state.showSearch);
-  const showFilter = useBeadsStore(state => state.showFilter);
-  const showExportDialog = useBeadsStore(state => state.showExportDialog);
-  const showThemeSelector = useBeadsStore(state => state.showThemeSelector);
-  const showJumpToPage = useBeadsStore(state => state.showJumpToPage);
-  const toggleExportDialog = useBeadsStore(state => state.toggleExportDialog);
-  const toggleThemeSelector = useBeadsStore(state => state.toggleThemeSelector);
   const terminalWidth = useBeadsStore(state => state.terminalWidth);
+  // Header reports the real terminal size; `height` is only what is left for this view.
   const terminalHeight = useBeadsStore(state => state.terminalHeight);
   const getSelectedIssue = useBeadsStore(state => state.getSelectedIssue);
   const getVisibleColumns = useBeadsStore(state => state.getVisibleColumns);
@@ -70,14 +64,8 @@ function KanbanView() {
     ? MIN_COLUMN_WIDTH
     : Math.min(MAX_COLUMN_WIDTH, Math.floor(widthForColumns / visibleColumns));
   const detailWidth = terminalWidth - visibleColumns * columnWidth - 2;
-  // Header: 2. Optional rows include their borders and bottom margins.
-  const detailsHeight = Math.max(1, terminalHeight
-    - 2
-    - getFooterHeight()
-    - (hasActiveFilters(filter, searchQuery) ? 4 : 0)
-    - (showSearch ? 5 : 0)
-    - (showFilter ? 14 : 0)
-    - (showJumpToPage ? 3 : 0));
+  // Header: 2. Shared chrome above the view is already excluded from `height`.
+  const detailsHeight = Math.max(1, height - 2 - getFooterHeight());
 
   const statusConfig = [
     { key: 'open', title: 'Open' },
@@ -95,10 +83,7 @@ function KanbanView() {
   const columnsToShow = statusConfig.slice(firstVisibleColumn, firstVisibleColumn + visibleColumns);
 
   return (
-    <Box flexDirection="column" width={terminalWidth} height={terminalHeight}>
-      {/* Toast message */}
-      <Toast />
-
+    <Box flexDirection="column" width={terminalWidth} height={height}>
       {/* Header */}
       <Box flexDirection="column">
         <Box justifyContent="space-between">
@@ -120,15 +105,6 @@ function KanbanView() {
           )}
         </Box>
       </Box>
-
-      {/* Filters banner */}
-      <FiltersBanner />
-
-      {/* Search Input */}
-      {showSearch && <SearchInput />}
-
-      {/* Filter Panel */}
-      {showFilter && <FilterPanel />}
 
       {/* Main content */}
       <Box flexGrow={1} overflow="hidden">
@@ -173,39 +149,8 @@ function KanbanView() {
         )}
       </Box>
 
-      {/* Command Bar (vim-style) */}
-      {showJumpToPage && <CommandBar />}
-
       {/* Footer */}
       <Footer currentView="kanban" />
-
-      {/* Export Dialog */}
-      {showExportDialog && selectedIssue && (
-        <Box
-          position="absolute"
-          marginTop={Math.floor(terminalHeight / 2) - 10}
-          marginLeft={Math.floor(terminalWidth / 2) - 35}
-        >
-          <ExportDialog
-            issue={selectedIssue}
-            onClose={toggleExportDialog}
-          />
-        </Box>
-      )}
-
-      {/* Theme Selector */}
-      {showThemeSelector && (
-        <Box
-          position="absolute"
-          marginTop={Math.floor(terminalHeight / 2) - 10}
-          marginLeft={Math.floor(terminalWidth / 2) - 30}
-        >
-          <ThemeSelector onClose={toggleThemeSelector} />
-        </Box>
-      )}
-
-      {/* Confirm Dialog */}
-      <ConfirmDialog />
     </Box>
   );
 }
@@ -221,24 +166,35 @@ export function Board() {
   const returnToPreviousView = useBeadsStore(state => state.returnToPreviousView);
   const reloadCallback = useBeadsStore(state => state.reloadCallback);
   const getSelectedIssue = useBeadsStore(state => state.getSelectedIssue);
-  const getFilteredIssues = useBeadsStore(state => state.getFilteredIssues);
   const getStatsIssues = useBeadsStore(state => state.getStatsIssues);
   const searchQuery = useBeadsStore(state => state.searchQuery);
   const filter = useBeadsStore(state => state.filter);
+  const showSearch = useBeadsStore(state => state.showSearch);
+  const showFilter = useBeadsStore(state => state.showFilter);
+  const showJumpToPage = useBeadsStore(state => state.showJumpToPage);
+  const showExportDialog = useBeadsStore(state => state.showExportDialog);
+  const showThemeSelector = useBeadsStore(state => state.showThemeSelector);
+  const toggleExportDialog = useBeadsStore(state => state.toggleExportDialog);
+  const toggleThemeSelector = useBeadsStore(state => state.toggleThemeSelector);
   const currentTheme = useBeadsStore(state => state.currentTheme);
   const theme = getTheme(currentTheme);
 
   const selectedIssue = getSelectedIssue();
 
-  const filteredIssues = useMemo(
-    () => getFilteredIssues(),
-    [data, searchQuery, filter, getFilteredIssues],
-  );
-
   const statsIssues = useMemo(
     () => getStatsIssues(),
     [data, searchQuery, filter, getStatsIssues],
   );
+
+  // Search, filter, the active-filter banner, and the command bar are shared
+  // chrome: they own keyboard input in every view, so they mount here rather
+  // than inside one view, and the view below shrinks by exactly what they take.
+  const chromeHeight =
+    (hasActiveFilters(filter, searchQuery) ? CHROME_HEIGHT.filtersBanner : 0)
+    + (showSearch ? CHROME_HEIGHT.searchInput : 0)
+    + (showFilter ? CHROME_HEIGHT.filterPanel : 0)
+    + (showJumpToPage ? CHROME_HEIGHT.commandBar : 0);
+  const viewHeight = Math.max(LAYOUT.issueCardHeight, terminalHeight - chromeHeight);
 
   // Check minimum terminal width
   if (terminalWidth < LAYOUT.minTerminalWidth) {
@@ -262,27 +218,33 @@ export function Board() {
 
   return (
     <Box flexDirection="column" width={terminalWidth} height={terminalHeight}>
+      {/* Shared chrome above every view */}
+      <Toast />
+      <FiltersBanner />
+      {showSearch && <SearchInput />}
+      {showFilter && <FilterPanel />}
+
       {/* Render view based on mode */}
-      {viewMode === 'kanban' && <KanbanView />}
+      {viewMode === 'kanban' && <KanbanView height={viewHeight} />}
       {viewMode === 'tree' && (
-        <TreeView data={data} terminalWidth={terminalWidth} terminalHeight={terminalHeight} />
+        <TreeView data={data} terminalWidth={terminalWidth} terminalHeight={viewHeight} />
       )}
       {viewMode === 'graph' && (
         <DependencyGraph
           data={data}
           terminalWidth={terminalWidth}
-          terminalHeight={terminalHeight}
+          terminalHeight={viewHeight}
         />
       )}
       {viewMode === 'list' && (
-        <ListView data={data} terminalWidth={terminalWidth} terminalHeight={terminalHeight} />
+        <ListView data={data} terminalWidth={terminalWidth} terminalHeight={viewHeight} />
       )}
       {viewMode === 'stats' && (
         <StatsView
           issues={statsIssues}
           totalIssues={data.issues.length}
           terminalWidth={terminalWidth}
-          terminalHeight={terminalHeight}
+          terminalHeight={viewHeight}
         />
       )}
       {viewMode === 'create-issue' && (
@@ -301,6 +263,31 @@ export function Board() {
             if (reloadCallback) reloadCallback();
           }}
         />
+      )}
+
+      {/* Command bar (vim-style) - shared across all views */}
+      <CommandBar />
+
+      {/* Export dialog - shared across all views */}
+      {showExportDialog && selectedIssue && (
+        <Box
+          position="absolute"
+          marginTop={Math.max(0, Math.floor(terminalHeight / 2) - 10)}
+          marginLeft={Math.max(0, Math.floor(terminalWidth / 2) - 35)}
+        >
+          <ExportDialog issue={selectedIssue} onClose={toggleExportDialog} />
+        </Box>
+      )}
+
+      {/* Theme selector - shared across all views */}
+      {showThemeSelector && (
+        <Box
+          position="absolute"
+          marginTop={Math.max(0, Math.floor(terminalHeight / 2) - 10)}
+          marginLeft={Math.max(0, Math.floor(terminalWidth / 2) - 30)}
+        >
+          <ThemeSelector onClose={toggleThemeSelector} />
+        </Box>
       )}
 
       {/* Visibility panel - shared across all views */}

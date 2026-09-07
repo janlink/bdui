@@ -3,7 +3,6 @@ import { Box, Text } from 'ink';
 import { useBeadsStore } from '../state/store';
 import { getTheme } from '../themes/themes';
 import { buildVisibleTree, flattenList } from '../utils/tree';
-import { computeVisibleIds } from '../utils/visibility';
 import { useTreeNavigation } from './useTreeNavigation';
 import { ListRow } from './IssueRow';
 import { DetailPanel } from './DetailPanel';
@@ -21,8 +20,14 @@ export function ListView({ data, terminalWidth, terminalHeight }: ListViewProps)
   const currentTheme = useBeadsStore(state => state.currentTheme);
   const theme = getTheme(currentTheme);
   const statusVisibility = useBeadsStore(state => state.statusVisibility);
+  const searchQuery = useBeadsStore(state => state.searchQuery);
+  const filter = useBeadsStore(state => state.filter);
+  const getRowVisibleIds = useBeadsStore(state => state.getRowVisibleIds);
 
-  const visibleIds = useMemo(() => computeVisibleIds(data, statusVisibility), [data, statusVisibility]);
+  const visibleIds = useMemo(
+    () => getRowVisibleIds(),
+    [data, statusVisibility, searchQuery, filter, getRowVisibleIds],
+  );
   const tree = useMemo(() => buildVisibleTree(data, visibleIds), [data, visibleIds]);
 
   const itemsPerPage = Math.max(terminalHeight - 6 - getFooterHeight(), 5);

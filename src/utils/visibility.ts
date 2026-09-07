@@ -64,3 +64,28 @@ export function computeVisibleIds(data: BeadsData, visibility: StatusVisibility)
 
   return visible;
 }
+
+// Row views draw hierarchy, so a match must not appear detached from the epic
+// it belongs to: add each match's ancestor chain as context. Ancestors outside
+// `allowed` stay out, and the walk continues past them, so a status-hidden
+// parent does not resurface while a visible grandparent still anchors the row.
+export function withAncestors(
+  data: BeadsData,
+  matched: Set<string>,
+  allowed: Set<string>,
+): Set<string> {
+  const { byId } = data;
+  const result = new Set(matched);
+
+  for (const id of matched) {
+    const seen = new Set<string>();
+    let parentId = byId.get(id)?.parent;
+    while (parentId && !seen.has(parentId)) {
+      seen.add(parentId);
+      if (allowed.has(parentId)) result.add(parentId);
+      parentId = byId.get(parentId)?.parent;
+    }
+  }
+
+  return result;
+}

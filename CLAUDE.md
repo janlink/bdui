@@ -110,9 +110,16 @@ The five presentation columns are:
 4. Closed
 5. Other
 
-`getVisibleColumns()` is the shared filtered/grouped view. Rendering, selection,
-navigation, pagination, editing, and exporting must all use this same view.
-When filters change, clamp or reset column selection and scroll state.
+`getVisibleColumns()` is the shared filtered/grouped view for the Kanban
+columns. Rendering, selection, navigation, pagination, editing, and exporting
+must all use this same view. When filters change, clamp or reset column
+selection and scroll state.
+
+The row-oriented list and tree views resolve status visibility hierarchically,
+so they cannot reuse that view. `getRowVisibleIds()` is their equivalent: it
+intersects the hierarchical status set with search and filter, then widens the
+result by each match's ancestor chain so a matched child keeps the epic above
+it as context. Both row views must read this one selector.
 
 ### UI (`src/components/`)
 
@@ -123,6 +130,12 @@ exact selected issue ID into the store before opening edit/export actions.
 
 Input is modal. Normal navigation must not process keystrokes while search,
 filter, forms, dialogs, theme selection, help, or the command bar owns input.
+Every input-owning overlay mounts in `Board`, not inside a single view, so a
+shortcut can never set a flag whose component is unmounted and leave the
+keyboard dead. `isModalOpen()` is the one definition of that set; global and
+per-view input handlers must gate on it, and it must precede the `q` and `?`
+shortcuts so a modal can accept those as text. `CHROME_HEIGHT` records what the
+shared rows occupy, and `Board` subtracts them from the height it passes down.
 
 Ink 6 layout props belong on `Box`; do not place Box-only margin/layout props on
 `Text`, and do not use unsupported absolute `top`/`left`/`right` props.

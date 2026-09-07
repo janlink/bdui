@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { Box, Text, useInput, useApp, useStdout } from 'ink';
-import { useBeadsStore } from '../state/store';
+import { useBeadsStore, isModalOpen } from '../state/store';
 import { Board } from './Board';
 import { BeadsWatcher } from '../bd/watcher';
 import { loadBeads, findBeadsDir } from '../bd/parser';
@@ -114,39 +114,17 @@ export function App() {
   const setViewMode = useBeadsStore(state => state.setViewMode);
   const viewMode = useBeadsStore(state => state.viewMode);
   const showDetails = useBeadsStore(state => state.showDetails);
-  const showSearch = useBeadsStore(state => state.showSearch);
-  const showFilter = useBeadsStore(state => state.showFilter);
-  const showExportDialog = useBeadsStore(state => state.showExportDialog);
-  const showThemeSelector = useBeadsStore(state => state.showThemeSelector);
-  const showJumpToPage = useBeadsStore(state => state.showJumpToPage);
-  const showVisibilityPanel = useBeadsStore(state => state.showVisibilityPanel);
+  const modalOpen = useBeadsStore(isModalOpen);
   const toggleVisibilityPanel = useBeadsStore(state => state.toggleVisibilityPanel);
-  const showConfirmDialog = useBeadsStore(state => state.showConfirmDialog);
   const showToast = useBeadsStore(state => state.showToast);
   const undo = useBeadsStore(state => state.undo);
   const reloadCallback = useBeadsStore(state => state.reloadCallback);
 
   // Handle keyboard input
   useInput((input, key) => {
-    const inFormView = viewMode === 'create-issue' || viewMode === 'edit-issue';
-
-    // Don't handle input when confirm dialog is open
-    if (showConfirmDialog) return;
-
-    // Handle 'q' key - disabled in forms, quits directly otherwise
-    if (input === 'q') {
-      if (inFormView) {
-        // 'q' does nothing in forms (allows typing 'q')
-        return;
-      }
-      // Not in form view, quit directly
-      exit();
-    }
-
-    // Always allow help
-    if (input === '?') {
-      toggleHelp();
-    }
+    // A mounted modal owns every keystroke, 'q' and '?' included, so its own
+    // handler can accept them as text instead of quitting or opening help.
+    if (modalOpen) return;
 
     // If in form view, allow ESC to return to previous view
     if (viewMode === 'create-issue' || viewMode === 'edit-issue') {
@@ -157,9 +135,12 @@ export function App() {
       return;
     }
 
-    // If modals are active, let those components handle input
-    if (showSearch || showFilter || showExportDialog || showThemeSelector || showJumpToPage || showVisibilityPanel) {
-      return;
+    if (input === 'q') {
+      exit();
+    }
+
+    if (input === '?') {
+      toggleHelp();
     }
 
     if (key.escape && showDetails) {
@@ -218,18 +199,6 @@ export function App() {
       return;
     }
 
-    // Edit issue
-    if (input === 'e') {
-      navigateToEditIssue();
-      return;
-    }
-
-    // Export issue
-    if (input === 'x') {
-      toggleExportDialog();
-      return;
-    }
-
     // Theme selector
     if (input === 't') {
       toggleThemeSelector();
@@ -271,8 +240,17 @@ export function App() {
 
     // Only Kanban keeps selection in the store. List/tree/graph own their
     // navigation locally, so routing these keys through the store there would
-    // trigger a wasted full-board re-render on every keypress.
+    // trigger a wasted full-board re-render on every keypress. Edit and export
+    // act on that selection, so those views handle them too.
     if (viewMode === 'kanban') {
+      if (input === 'e') {
+        navigateToEditIssue();
+        return;
+      }
+      if (input === 'x') {
+        toggleExportDialog();
+        return;
+      }
       if (input === 'G' || input === '$') {
         jumpToLast();
         return;
