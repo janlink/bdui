@@ -41,7 +41,10 @@ export function Footer({ currentView }: FooterProps) {
       height={getFooterHeight()}
       overflow="hidden"
     >
-      <Text color={theme.colors.textDim}>{FOOTER_PRIMARY_SHORTCUTS}</Text>
+      <Text color={theme.colors.textDim}>
+        {FOOTER_PRIMARY_SHORTCUTS}
+        {(currentView === 'list' || currentView === 'tree') ? ' | ←/→ fold' : ''}
+      </Text>
       <Box gap={1}>
         {views.map(v => (
           <Text

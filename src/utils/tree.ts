@@ -11,7 +11,12 @@ export interface FlatNode {
   depth: number;
   isLast: boolean;
   prefix: string;
+  hasChildren: boolean;
+  collapsed: boolean;
+  parentId: string | null;
 }
+
+const NO_COLLAPSED: ReadonlySet<string> = new Set();
 
 // Build the parent/child hierarchy, then prune it to the visible set. Hidden
 // nodes are dropped and their visible descendants are lifted to the hidden
@@ -56,21 +61,24 @@ export function buildVisibleTree(data: BeadsData, visibleIds: Set<string>): Tree
   return prune(roots, 0);
 }
 
-export function flattenTree(roots: TreeNode[]): FlatNode[] {
+export function flattenTree(roots: TreeNode[], collapsed: ReadonlySet<string> = NO_COLLAPSED): FlatNode[] {
   const flat: FlatNode[] = [];
 
-  function traverse(node: TreeNode, prefix: string, isLast: boolean) {
-    flat.push({ issue: node.issue, depth: node.depth, isLast, prefix });
+  function traverse(node: TreeNode, prefix: string, isLast: boolean, parentId: string | null) {
+    const hasChildren = node.children.length > 0;
+    const isCollapsed = collapsed.has(node.issue.id);
+    flat.push({ issue: node.issue, depth: node.depth, isLast, prefix, hasChildren, collapsed: isCollapsed, parentId });
 
+    if (!hasChildren || isCollapsed) return;
     for (let i = 0; i < node.children.length; i++) {
       const childIsLast = i === node.children.length - 1;
       const verticalLine = isLast ? '   ' : '│  ';
-      traverse(node.children[i], prefix + verticalLine, childIsLast);
+      traverse(node.children[i], prefix + verticalLine, childIsLast, node.issue.id);
     }
   }
 
   for (let i = 0; i < roots.length; i++) {
-    traverse(roots[i], '', i === roots.length - 1);
+    traverse(roots[i], '', i === roots.length - 1, null);
   }
 
   return flat;
@@ -79,18 +87,21 @@ export function flattenTree(roots: TreeNode[]): FlatNode[] {
 // bd list-style flattening: each root's subtree is drawn independently, so
 // children sit directly under their root without a vertical line climbing to
 // the next root. Inner levels still get proper connectors.
-export function flattenList(roots: TreeNode[]): FlatNode[] {
+export function flattenList(roots: TreeNode[], collapsed: ReadonlySet<string> = NO_COLLAPSED): FlatNode[] {
   const flat: FlatNode[] = [];
 
-  function traverse(node: TreeNode, depth: number, isLast: boolean, prefix: string) {
-    flat.push({ issue: node.issue, depth, isLast, prefix });
+  function traverse(node: TreeNode, depth: number, isLast: boolean, prefix: string, parentId: string | null) {
+    const hasChildren = node.children.length > 0;
+    const isCollapsed = collapsed.has(node.issue.id);
+    flat.push({ issue: node.issue, depth, isLast, prefix, hasChildren, collapsed: isCollapsed, parentId });
 
+    if (!hasChildren || isCollapsed) return;
     const childPrefix = prefix + (depth === 0 ? '' : isLast ? '   ' : '│  ');
     node.children.forEach((child, i) =>
-      traverse(child, depth + 1, i === node.children.length - 1, childPrefix),
+      traverse(child, depth + 1, i === node.children.length - 1, childPrefix, node.issue.id),
     );
   }
 
-  roots.forEach((root, i) => traverse(root, 0, i === roots.length - 1, ''));
+  roots.forEach((root, i) => traverse(root, 0, i === roots.length - 1, '', null));
   return flat;
 }
