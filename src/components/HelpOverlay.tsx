@@ -42,6 +42,7 @@ export function HelpOverlay() {
           <Text>  <Text color={theme.colors.primary}>3</Text>              Tree view (hierarchical)</Text>
           <Text>  <Text color={theme.colors.primary}>4</Text>              Dependency graph (ASCII art)</Text>
           <Text>  <Text color={theme.colors.primary}>5</Text>              Statistics & analytics dashboard</Text>
+          <Text>  <Text color={theme.colors.primary}>6</Text>              Memories (bd remember; d delete, r refresh)</Text>
         </Box>
 
         <Box flexDirection="column" gap={0} marginTop={1}>
@@ -77,7 +78,7 @@ export function HelpOverlay() {
           <Text>  <Text color={theme.colors.primary}>:issue-id</Text>       Jump to issue by ID</Text>
           <Text>  <Text color={theme.colors.primary}>:s o/i/b/c</Text>      Set status</Text>
           <Text>  <Text color={theme.colors.primary}>:p 0-4</Text>          Set priority (P0 Critical → P4 Backlog)</Text>
-          <Text>  <Text color={theme.colors.primary}>:kanban/tree/graph/stats/list</Text>  Switch view</Text>
+          <Text>  <Text color={theme.colors.primary}>:kanban/tree/graph/stats/list/mem</Text>  Switch view</Text>
           <Text>  <Text color={theme.colors.primary}>:theme name</Text>     Change theme</Text>
           <Text>  <Text color={theme.colors.primary}>:new :edit :q</Text>   Create, edit, quit</Text>
         </Box>

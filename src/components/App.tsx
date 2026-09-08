@@ -12,6 +12,7 @@ export function App() {
   const setData = useBeadsStore(state => state.setData);
   const setTerminalSize = useBeadsStore(state => state.setTerminalSize);
   const setReloadCallback = useBeadsStore(state => state.setReloadCallback);
+  const setBeadsPath = useBeadsStore(state => state.setBeadsPath);
   const currentTheme = useBeadsStore(state => state.currentTheme);
   const theme = getTheme(currentTheme);
   const [error, setError] = useState<string | null>(null);
@@ -56,6 +57,7 @@ export function App() {
         const data = await loadBeads(path);
         if (disposed) return;
         setData(data);
+        setBeadsPath(path);
 
         // Set up watcher
         const pollMs = Number(process.env.BDUI_POLL_MS);
@@ -89,8 +91,9 @@ export function App() {
       unsubscribe?.();
       activeWatcher?.stop();
       setReloadCallback(null);
+      setBeadsPath(null);
     };
-  }, [setData, setReloadCallback]);
+  }, [setData, setReloadCallback, setBeadsPath]);
 
   // Keyboard navigation
   const moveUp = useBeadsStore(state => state.moveUp);
@@ -236,6 +239,9 @@ export function App() {
     }
     if (input === '5') {
       setViewMode('stats');
+    }
+    if (input === '6') {
+      setViewMode('memories');
     }
 
     // Only Kanban keeps selection in the store. List/tree/graph own their

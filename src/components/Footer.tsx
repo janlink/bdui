@@ -6,7 +6,7 @@ import { VIEW_NAMES } from '../utils/constants';
 import { STATUS_KEYS, STATUS_LABELS } from '../utils/visibility';
 
 interface FooterProps {
-  currentView: 'kanban' | 'tree' | 'graph' | 'stats' | 'list';
+  currentView: 'kanban' | 'tree' | 'graph' | 'stats' | 'list' | 'memories';
 }
 
 export const FOOTER_PRIMARY_SHORTCUTS = '/ search | f filter | v show | Enter/Space details | : cmd';
@@ -30,6 +30,7 @@ export function Footer({ currentView }: FooterProps) {
     { key: 'tree', num: '3', name: VIEW_NAMES.tree },
     { key: 'graph', num: '4', name: VIEW_NAMES.graph },
     { key: 'stats', num: '5', name: VIEW_NAMES.stats },
+    { key: 'memories', num: '6', name: VIEW_NAMES.memories },
   ];
 
   return (

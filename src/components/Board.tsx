@@ -16,6 +16,7 @@ import { EditIssueForm } from './EditIssueForm';
 import { ExportDialog } from './ExportDialog';
 import { ThemeSelector } from './ThemeSelector';
 import { StatsView } from './StatsView';
+import { MemoriesView } from './MemoriesView';
 import { Toast } from './Toast';
 import { FiltersBanner } from './FiltersBanner';
 import { ConfirmDialog } from './ConfirmDialog';
@@ -246,6 +247,9 @@ export function Board() {
           terminalWidth={terminalWidth}
           terminalHeight={viewHeight}
         />
+      )}
+      {viewMode === 'memories' && (
+        <MemoriesView terminalWidth={terminalWidth} terminalHeight={viewHeight} />
       )}
       {viewMode === 'create-issue' && (
         <CreateIssueForm

@@ -94,6 +94,11 @@ export function CommandBar() {
         setViewMode('stats');
         return { success: true, message: 'Stats view' };
 
+      case 'mem':
+      case 'memories':
+        setViewMode('memories');
+        return { success: true, message: 'Memories view' };
+
       case 'list':
       case 'l':
         setViewMode('list');

@@ -40,6 +40,7 @@ export interface BeadsStore {
   data: BeadsData;
   previousIssues: Map<string, Issue>; // Track previous state for notifications
   reloadCallback: (() => void) | null; // Callback to reload data from database
+  beadsPath: string | null; // Active .beads directory, used for out-of-band reads (memories)
 
   // Terminal dimensions
   terminalWidth: number;
@@ -51,8 +52,8 @@ export interface BeadsStore {
   itemsPerPage: number;
 
   // UI state
-  viewMode: 'kanban' | 'tree' | 'graph' | 'stats' | 'list' | 'create-issue' | 'edit-issue';
-  previousView: 'kanban' | 'tree' | 'graph' | 'stats' | 'list';
+  viewMode: 'kanban' | 'tree' | 'graph' | 'stats' | 'list' | 'memories' | 'create-issue' | 'edit-issue';
+  previousView: 'kanban' | 'tree' | 'graph' | 'stats' | 'list' | 'memories';
   showHelp: boolean;
   showDetails: boolean;
   showSearch: boolean;
@@ -91,6 +92,7 @@ export interface BeadsStore {
   // Actions
   setData: (data: BeadsData) => void;
   setReloadCallback: (callback: (() => void) | null) => void;
+  setBeadsPath: (path: string | null) => void;
   setFilter: (filter: BeadsStore['filter']) => void;
   toggleStatusVisibility: (key: StatusKey) => void;
   resetStatusVisibility: () => void;
@@ -121,7 +123,7 @@ export interface BeadsStore {
   toggleJumpToPage: () => void;
   setTheme: (theme: string) => void;
   clearFilters: () => void;
-  setViewMode: (mode: 'kanban' | 'tree' | 'graph' | 'stats' | 'list' | 'create-issue' | 'edit-issue') => void;
+  setViewMode: (mode: 'kanban' | 'tree' | 'graph' | 'stats' | 'list' | 'memories' | 'create-issue' | 'edit-issue') => void;
   navigateToCreateIssue: () => void;
   navigateToEditIssue: () => void;
   returnToPreviousView: () => void;
@@ -234,6 +236,7 @@ export const useBeadsStore = create<BeadsStore>((set, get) => ({
 
   previousIssues: new Map(),
   reloadCallback: null,
+  beadsPath: null,
 
   // Terminal dimensions (defaults, will be updated)
   terminalWidth: 120,
@@ -320,6 +323,8 @@ export const useBeadsStore = create<BeadsStore>((set, get) => ({
   },
 
   setReloadCallback: (callback) => set({ reloadCallback: callback }),
+
+  setBeadsPath: (beadsPath) => set({ beadsPath }),
 
   setFilter: (filter) => set({ filter, columnStates: resetColumnStates() }),
 

@@ -46,3 +46,9 @@ export interface BeadsData {
     blocked: number;
   };
 }
+
+// A persistent memory from `bd remember` (key/value), surfaced by `bd memories`.
+export interface Memory {
+  key: string;
+  value: string;
+}

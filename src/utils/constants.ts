@@ -60,6 +60,7 @@ export const VIEW_NAMES: Record<string, string> = {
   graph: 'Graph',
   stats: 'Stats',
   list: 'List',
+  memories: 'Memories',
 };
 
 // Helper function to get priority color from theme

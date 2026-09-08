@@ -173,6 +173,17 @@ For interaction changes, also run the compiled TUI in a real terminal against a
 representative current Beads workspace. Exercise each changed key path once;
 builds and unit tests are not a substitute for rendered interaction checks.
 
+To drive the TUI headlessly (no controlling terminal), allocate a PTY with
+`script` and feed timed keystrokes. The PTY reports 0 columns by default, which
+trips the "Terminal Too Narrow" guard, so set the size with `stty` inside the
+child before launching:
+
+```bash
+{ sleep 2; printf '6'; sleep 1; printf 'q'; } \
+  | script -qfc "stty rows 45 cols 140; cd <workspace> && exec /abs/path/bdui" /dev/null \
+  | sed 's/\x1b\[[0-9;?]*[a-zA-Z]//g; s/\r/\n/g'   # strip ANSI to grep rendered text
+```
+
 ## Release and documentation
 
 Keep `README.md`, package scripts, and GitHub Actions aligned with the actual
