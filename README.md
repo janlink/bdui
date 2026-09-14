@@ -2,6 +2,8 @@
 
 A beautiful, real-time Text User Interface (TUI) visualizer for the [bd (Beads)](https://github.com/gastownhall/beads) issue tracker.
 
+> **`bdui-next`** continues [assimelha/bdui](https://github.com/assimelha/bdui), which is no longer maintained. The repository lives at [janlink/bdui-next](https://github.com/janlink/bdui-next); the binary and command are still named `bdui`.
+
 ![License](https://img.shields.io/badge/license-MIT-blue.svg)
 ![Platform](https://img.shields.io/badge/platform-macOS%20%7C%20Linux%20%7C%20Windows-lightgrey.svg)
 ![Bun](https://img.shields.io/badge/runtime-Bun-f472b6.svg)
@@ -60,8 +62,8 @@ chmod +x bdui-macos-arm64
 
 ```bash
 # Clone the repository
-git clone <repository-url>
-cd bdui
+git clone https://github.com/janlink/bdui-next.git
+cd bdui-next
 
 # Install dependencies
 bun install
@@ -345,7 +347,7 @@ The automated suite creates isolated temporary embedded-Dolt workspaces with the
 
 ### Project Structure
 ```
-bdui/
+bdui-next/
 ├── src/
 │   ├── components/       # React/Ink components
 │   │   ├── App.tsx       # Main app with keyboard handling
@@ -389,8 +391,8 @@ Contributions are welcome! This project uses [bd (Beads)](https://github.com/gas
 ### Development Setup
 ```bash
 # Clone repository
-git clone <repository-url>
-cd bdui
+git clone https://github.com/janlink/bdui-next.git
+cd bdui-next
 
 # Install dependencies
 bun install
