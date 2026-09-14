@@ -13,7 +13,33 @@ export const LAYOUT = {
   descriptionMaxLength: 200,
   minTerminalWidth: 60,
   minTerminalHeight: 20,
+  // Below splitViewMinWidth the Tree/Graph detail panel replaces the list; at or
+  // above it, list and panel sit side by side and each keeps at least its min.
+  splitViewMinListWidth: 40,
+  splitViewMinPanelWidth: 50,
+  splitViewMinWidth: 92, // splitViewMinListWidth + splitViewMinPanelWidth + gap
 } as const;
+
+// Space between the list and the detail panel; mirrors the panel Box marginLeft.
+const SPLIT_VIEW_GAP = 2;
+
+// Row-oriented views (Tree, Graph) show the detail panel beside the list when the
+// terminal is wide enough for both, otherwise it replaces the list (like Kanban).
+// Panel width grows up to detailPanelWidth; the list takes the remainder.
+export function splitViewLayout(terminalWidth: number): {
+  fits: boolean;
+  listWidth: number;
+  panelWidth: number;
+} {
+  if (terminalWidth < LAYOUT.splitViewMinWidth) {
+    return { fits: false, listWidth: terminalWidth, panelWidth: 0 };
+  }
+  const panelWidth = Math.max(
+    LAYOUT.splitViewMinPanelWidth,
+    Math.min(LAYOUT.detailPanelWidth, terminalWidth - LAYOUT.splitViewMinListWidth - SPLIT_VIEW_GAP),
+  );
+  return { fits: true, listWidth: terminalWidth - panelWidth - SPLIT_VIEW_GAP, panelWidth };
+}
 
 // Rows the shared chrome above a view occupies when open. Each value covers the
 // component's own content plus its border and bottom margin, so a view can

@@ -21,11 +21,15 @@ type Flatten = (roots: TreeNode[], collapsed: ReadonlySet<string>) => FlatNode[]
 // Shared keyboard navigation for the row-oriented list and tree views: vertical
 // movement, collapsing/expanding parents, and opening the edit form. Both views
 // own their selection locally so keypresses never trigger a store-wide re-render.
-export function useTreeNavigation(tree: TreeNode[], flatten: Flatten, itemsPerPage: number): TreeNavigation {
+export function useTreeNavigation(
+  tree: TreeNode[],
+  flatten: Flatten,
+  itemsPerPage: number,
+  detailsReplaceList: boolean,
+): TreeNavigation {
   const [collapsed, setCollapsed] = useState<Set<string>>(() => new Set());
   const [nav, setNav] = useState<NavState>({ selectedIndex: 0, scrollOffset: 0 });
 
-  const showDetails = useBeadsStore(state => state.showDetails);
   const modalOpen = useBeadsStore(isModalOpen);
   const selectIssueById = useBeadsStore(state => state.selectIssueById);
   const navigateToEditIssue = useBeadsStore(state => state.navigateToEditIssue);
@@ -56,7 +60,7 @@ export function useTreeNavigation(tree: TreeNode[], flatten: Flatten, itemsPerPa
 
     // Functional updates so a held arrow key accumulates every repeat event
     // instead of collapsing them into one step against a stale selectedIndex.
-    if ((!showDetails && key.upArrow) || input === 'k') {
+    if ((!detailsReplaceList && key.upArrow) || input === 'k') {
       setNav(prev => {
         if (prev.selectedIndex <= 0) return prev;
         const selectedIndex = prev.selectedIndex - 1;
@@ -65,7 +69,7 @@ export function useTreeNavigation(tree: TreeNode[], flatten: Flatten, itemsPerPa
       return;
     }
 
-    if ((!showDetails && key.downArrow) || input === 'j') {
+    if ((!detailsReplaceList && key.downArrow) || input === 'j') {
       setNav(prev => {
         if (prev.selectedIndex >= flatNodes.length - 1) return prev;
         const selectedIndex = prev.selectedIndex + 1;
@@ -75,7 +79,7 @@ export function useTreeNavigation(tree: TreeNode[], flatten: Flatten, itemsPerPa
     }
 
     // Right: expand a collapsed parent, otherwise descend to its first child.
-    if ((!showDetails && key.rightArrow) || input === 'l') {
+    if ((!detailsReplaceList && key.rightArrow) || input === 'l') {
       const node = flatNodes[nav.selectedIndex];
       if (!node?.hasChildren) return;
       if (node.collapsed) {
@@ -91,7 +95,7 @@ export function useTreeNavigation(tree: TreeNode[], flatten: Flatten, itemsPerPa
     }
 
     // Left: collapse an expanded parent, otherwise jump to the parent node.
-    if ((!showDetails && key.leftArrow) || input === 'h') {
+    if ((!detailsReplaceList && key.leftArrow) || input === 'h') {
       const node = flatNodes[nav.selectedIndex];
       if (!node) return;
       if (node.hasChildren && !node.collapsed) {
