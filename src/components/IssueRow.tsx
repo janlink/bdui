@@ -78,38 +78,4 @@ function ListRowImpl({ node, isSelected, theme, width }: RowProps) {
   );
 }
 
-function TreeRowImpl({ node, isSelected, theme, width }: RowProps) {
-  const { issue } = node;
-  const isBlocked = Boolean(issue.blockedBy?.length);
-
-  const gutter = isSelected ? '▸ ' : '  ';
-  const branch = `${node.prefix}${node.isLast ? '└─' : '├─'} `;
-  const caret = node.hasChildren ? (node.collapsed ? '▸ ' : '▾ ') : '  ';
-  const blockedMark = isBlocked ? ' [!]' : '    ';
-  const meta = `${issue.id} ${issue.issue_type} ${issue.displayStatus} P${issue.priority}${blockedMark}`;
-
-  const fixedWidth = stringWidth(gutter) + stringWidth(branch) + stringWidth(caret) + stringWidth(meta);
-  const title = fitToWidth(issue.title || issue.id, Math.max(4, width - fixedWidth - 2));
-  // Explicit padding keeps the meta column flush right without a flexGrow
-  // spacer, which would require a Box and split the row into several nodes.
-  const gap = Math.max(1, width - fixedWidth - stringWidth(title));
-
-  return (
-    <Text wrap="truncate-end">
-      <Text color={theme.colors.primary}>{gutter}</Text>
-      <Text color={theme.colors.textDim}>{branch}{caret}</Text>
-      <Text bold={isSelected} color={isSelected ? theme.colors.primary : theme.colors.text}>
-        {title}
-      </Text>
-      <Text>{' '.repeat(gap)}</Text>
-      <Text color={theme.colors.textDim}>{issue.id} </Text>
-      <Text color={getTypeColor(issue.issue_type, theme)}>{issue.issue_type} </Text>
-      <Text color={getStatusColor(issue.displayStatus, theme)}>{issue.displayStatus} </Text>
-      <Text color={getPriorityColor(issue.priority, theme)}>P{issue.priority}</Text>
-      <Text color={theme.colors.statusBlocked} bold>{blockedMark}</Text>
-    </Text>
-  );
-}
-
 export const ListRow = React.memo(ListRowImpl);
-export const TreeRow = React.memo(TreeRowImpl);

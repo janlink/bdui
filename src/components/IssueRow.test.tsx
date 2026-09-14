@@ -5,8 +5,8 @@ import { Box, render } from 'ink';
 import stringWidth from 'string-width';
 import { normalizeBeads } from '../bd/parser';
 import { getTheme } from '../themes/themes';
-import { buildVisibleTree, flattenList, flattenTree } from '../utils/tree';
-import { ListRow, TreeRow } from './IssueRow';
+import { buildVisibleTree, flattenTree } from '../utils/tree';
+import { ListRow } from './IssueRow';
 import type { TreeNode } from '../utils/tree';
 
 const ANSI = /\u001B\[[0-9;?]*[A-Za-z]/g;
@@ -66,8 +66,8 @@ const tree: TreeNode[] = buildVisibleTree(data, new Set(data.issues.map(issue =>
 const theme = getTheme('default');
 
 for (const width of [40, 60, 120]) {
-  test(`list rows stay inside a ${width}-column terminal`, async () => {
-    const nodes = flattenList(tree);
+  test(`rows stay inside a ${width}-column terminal`, async () => {
+    const nodes = flattenTree(tree);
     const lines = await renderLines(
       <Box flexDirection="column" width={width}>
         {nodes.map((node, idx) => (
@@ -80,25 +80,10 @@ for (const width of [40, 60, 120]) {
     expect(lines).toHaveLength(nodes.length);
     for (const line of lines) expect(stringWidth(line)).toBeLessThanOrEqual(width);
   });
-
-  test(`tree rows stay inside a ${width}-column terminal`, async () => {
-    const nodes = flattenTree(tree);
-    const lines = await renderLines(
-      <Box flexDirection="column" width={width}>
-        {nodes.map((node, idx) => (
-          <TreeRow key={node.issue.id} node={node} isSelected={idx === 1} theme={theme} width={width} />
-        ))}
-      </Box>,
-      width,
-    );
-
-    expect(lines).toHaveLength(nodes.length);
-    for (const line of lines) expect(stringWidth(line)).toBeLessThanOrEqual(width);
-  });
 }
 
-test('list row truncates an oversized title with an ellipsis', async () => {
-  const nodes = flattenList(tree);
+test('row truncates an oversized title with an ellipsis', async () => {
+  const nodes = flattenTree(tree);
   const lines = await renderLines(
     <Box flexDirection="column" width={60}>
       {nodes.map(node => (
@@ -114,7 +99,7 @@ test('list row truncates an oversized title with an ellipsis', async () => {
 });
 
 test('wide-character title is truncated on display width, not code units', async () => {
-  const cjk = flattenList(tree).find(node => node.issue.id === 'bd-0002')!;
+  const cjk = flattenTree(tree).find(node => node.issue.id === 'bd-0002')!;
   const lines = await renderLines(
     <Box flexDirection="column" width={44}>
       <ListRow node={cjk} isSelected={false} theme={theme} width={44} />
@@ -125,30 +110,4 @@ test('wide-character title is truncated on display width, not code units', async
   expect(lines[0]).toContain('日本語');
   expect(lines[0]!.endsWith('…')).toBe(true);
   expect(stringWidth(lines[0]!)).toBeLessThanOrEqual(44);
-});
-
-test('tree row keeps the meta column flush right', async () => {
-  const width = 110;
-  const nodes = flattenTree(tree);
-  const lines = await renderLines(
-    <Box flexDirection="column" width={width}>
-      {nodes.map(node => (
-        <TreeRow key={node.issue.id} node={node} isSelected={false} theme={theme} width={width} />
-      ))}
-    </Box>,
-    width,
-  );
-
-  for (const [idx, node] of nodes.entries()) {
-    const line = lines[idx]!;
-    expect(line).toContain(node.issue.id);
-    // The blocked marker occupies four cells at the right edge; unblocked rows
-    // pad it with spaces, which Ink trims off the end of every frame line.
-    const trimmedMarker = node.issue.blockedBy?.length ? 0 : 4;
-    expect(stringWidth(line) + trimmedMarker).toBe(width);
-  }
-
-  const blocked = nodes.findIndex(node => node.issue.blockedBy?.length);
-  expect(blocked).toBeGreaterThanOrEqual(0);
-  expect(lines[blocked]!.endsWith('[!]')).toBe(true);
 });

@@ -226,21 +226,18 @@ export function App() {
 
     // View switching
     if (input === '1') {
-      setViewMode('list');
+      setViewMode('tree');
     }
     if (input === '2') {
       setViewMode('kanban');
     }
     if (input === '3') {
-      setViewMode('tree');
-    }
-    if (input === '4') {
       setViewMode('graph');
     }
-    if (input === '5') {
+    if (input === '4') {
       setViewMode('stats');
     }
-    if (input === '6') {
+    if (input === '5') {
       setViewMode('memories');
     }
 

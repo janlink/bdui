@@ -59,7 +59,6 @@ export const VIEW_NAMES: Record<string, string> = {
   tree: 'Tree',
   graph: 'Graph',
   stats: 'Stats',
-  list: 'List',
   memories: 'Memories',
 };
 

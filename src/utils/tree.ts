@@ -83,25 +83,3 @@ export function flattenTree(roots: TreeNode[], collapsed: ReadonlySet<string> = 
 
   return flat;
 }
-
-// bd list-style flattening: each root's subtree is drawn independently, so
-// children sit directly under their root without a vertical line climbing to
-// the next root. Inner levels still get proper connectors.
-export function flattenList(roots: TreeNode[], collapsed: ReadonlySet<string> = NO_COLLAPSED): FlatNode[] {
-  const flat: FlatNode[] = [];
-
-  function traverse(node: TreeNode, depth: number, isLast: boolean, prefix: string, parentId: string | null) {
-    const hasChildren = node.children.length > 0;
-    const isCollapsed = collapsed.has(node.issue.id);
-    flat.push({ issue: node.issue, depth, isLast, prefix, hasChildren, collapsed: isCollapsed, parentId });
-
-    if (!hasChildren || isCollapsed) return;
-    const childPrefix = prefix + (depth === 0 ? '' : isLast ? '   ' : '│  ');
-    node.children.forEach((child, i) =>
-      traverse(child, depth + 1, i === node.children.length - 1, childPrefix, node.issue.id),
-    );
-  }
-
-  roots.forEach((root, i) => traverse(root, 0, i === roots.length - 1, '', null));
-  return flat;
-}

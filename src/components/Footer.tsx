@@ -6,7 +6,7 @@ import { VIEW_NAMES } from '../utils/constants';
 import { STATUS_KEYS, STATUS_LABELS } from '../utils/visibility';
 
 interface FooterProps {
-  currentView: 'kanban' | 'tree' | 'graph' | 'stats' | 'list' | 'memories';
+  currentView: 'kanban' | 'tree' | 'graph' | 'stats' | 'memories';
 }
 
 export const FOOTER_PRIMARY_SHORTCUTS = '/ search | f filter | v show | Enter/Space details | : cmd';
@@ -25,12 +25,11 @@ export function Footer({ currentView }: FooterProps) {
   const hiddenLabels = STATUS_KEYS.filter(key => !statusVisibility[key]).map(key => STATUS_LABELS[key]);
 
   const views = [
-    { key: 'list', num: '1', name: VIEW_NAMES.list },
+    { key: 'tree', num: '1', name: VIEW_NAMES.tree },
     { key: 'kanban', num: '2', name: VIEW_NAMES.kanban },
-    { key: 'tree', num: '3', name: VIEW_NAMES.tree },
-    { key: 'graph', num: '4', name: VIEW_NAMES.graph },
-    { key: 'stats', num: '5', name: VIEW_NAMES.stats },
-    { key: 'memories', num: '6', name: VIEW_NAMES.memories },
+    { key: 'graph', num: '3', name: VIEW_NAMES.graph },
+    { key: 'stats', num: '4', name: VIEW_NAMES.stats },
+    { key: 'memories', num: '5', name: VIEW_NAMES.memories },
   ];
 
   return (
@@ -44,7 +43,7 @@ export function Footer({ currentView }: FooterProps) {
     >
       <Text color={theme.colors.textDim}>
         {FOOTER_PRIMARY_SHORTCUTS}
-        {(currentView === 'list' || currentView === 'tree') ? ' | ←/→ fold' : ''}
+        {currentView === 'tree' ? ' | ←/→ fold' : ''}
       </Text>
       <Box gap={1}>
         {views.map(v => (

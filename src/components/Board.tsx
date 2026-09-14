@@ -7,7 +7,6 @@ import { DetailPanel } from './DetailPanel';
 import { HelpOverlay } from './HelpOverlay';
 import { TreeView } from './TreeView';
 import { DependencyGraph } from './DependencyGraph';
-import { ListView } from './ListView';
 import { VisibilityPanel } from './VisibilityPanel';
 import { SearchInput } from './SearchInput';
 import { FilterPanel } from './FilterPanel';
@@ -236,9 +235,6 @@ export function Board() {
           terminalWidth={terminalWidth}
           terminalHeight={viewHeight}
         />
-      )}
-      {viewMode === 'list' && (
-        <ListView data={data} terminalWidth={terminalWidth} terminalHeight={viewHeight} />
       )}
       {viewMode === 'stats' && (
         <StatsView

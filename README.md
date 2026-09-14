@@ -139,10 +139,11 @@ BDUI_POLL_MS=10000 bdui
 - `Enter` or `Space` - Toggle detail panel
 
 #### Views
-- `1` - Kanban board view (default)
-- `2` - Tree view (hierarchical)
+- `1` - Tree view (hierarchical, default)
+- `2` - Kanban board view
 - `3` - Dependency graph
 - `4` - Statistics dashboard
+- `5` - Memories
 
 #### Actions
 - `N` (Shift+N) - Create new issue
@@ -170,7 +171,7 @@ BDUI_POLL_MS=10000 bdui
 
 ## 🎨 Views
 
-### Kanban View (Default)
+### Kanban View
 The main view shows issues organized in five columns:
 - **Open** - New or ready-to-work issues
 - **In Progress** - Currently being worked on
@@ -185,13 +186,14 @@ Features:
 - Per-column pagination and selection
 - Responsive layout (adapts to terminal size)
 
-### Tree View
+### Tree View (Default)
 Shows hierarchical parent-child relationships:
 - Navigate with ↑/↓ or k/j
+- Press ←/→ or h/l to collapse/expand a parent
 - Press Enter/Space to toggle details
 - Press `e` to edit selected issue
 - Visual tree structure with connection lines
-- Depth-aware indentation
+- Per-issue metadata up front, depth-aware indentation
 
 ### Dependency Graph
 Visualizes issue dependencies:

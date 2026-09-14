@@ -1,6 +1,6 @@
 import { expect, test } from 'bun:test';
 import { normalizeBeads } from '../bd/parser';
-import { buildVisibleTree, flattenList, flattenTree } from './tree';
+import { buildVisibleTree, flattenTree } from './tree';
 import { computeVisibleIds, DEFAULT_STATUS_VISIBILITY } from './visibility';
 import type { FlatNode } from './tree';
 
@@ -23,8 +23,8 @@ function sampleTree() {
 const ids = (nodes: FlatNode[]) => nodes.map(n => n.issue.id);
 const byId = (nodes: FlatNode[], id: string) => nodes.find(n => n.issue.id === id)!;
 
-test('flattenList marks parents, leaves, and parent ids', () => {
-  const flat = flattenList(sampleTree());
+test('flattenTree marks parents, leaves, and parent ids', () => {
+  const flat = flattenTree(sampleTree());
 
   expect(new Set(ids(flat))).toEqual(new Set(['epic', 'epic.a', 'epic.a1', 'epic.b']));
   expect(byId(flat, 'epic').hasChildren).toBe(true);
@@ -42,7 +42,7 @@ test('flattenList marks parents, leaves, and parent ids', () => {
 });
 
 test('collapsing the root hides every descendant but keeps the root', () => {
-  const flat = flattenList(sampleTree(), new Set(['epic']));
+  const flat = flattenTree(sampleTree(), new Set(['epic']));
 
   expect(ids(flat)).toEqual(['epic']);
   expect(byId(flat, 'epic').collapsed).toBe(true);
@@ -50,20 +50,10 @@ test('collapsing the root hides every descendant but keeps the root', () => {
 });
 
 test('collapsing an inner node hides only its subtree', () => {
-  const flat = flattenList(sampleTree(), new Set(['epic.a']));
+  const flat = flattenTree(sampleTree(), new Set(['epic.a']));
 
   expect(new Set(ids(flat))).toEqual(new Set(['epic', 'epic.a', 'epic.b']));
   expect(ids(flat)).not.toContain('epic.a1');
   expect(byId(flat, 'epic.a').collapsed).toBe(true);
   expect(byId(flat, 'epic.b').collapsed).toBe(false);
-});
-
-test('flattenTree honours the collapsed set the same way', () => {
-  const full = flattenTree(sampleTree());
-  expect(new Set(ids(full))).toEqual(new Set(['epic', 'epic.a', 'epic.a1', 'epic.b']));
-
-  const collapsed = flattenTree(sampleTree(), new Set(['epic.a']));
-  expect(ids(collapsed)).not.toContain('epic.a1');
-  expect(byId(collapsed, 'epic.a').hasChildren).toBe(true);
-  expect(byId(collapsed, 'epic.a').collapsed).toBe(true);
 });

@@ -4,7 +4,7 @@ import { useBeadsStore } from '../state/store';
 import { getTheme } from '../themes/themes';
 import { buildVisibleTree, flattenTree } from '../utils/tree';
 import { useTreeNavigation } from './useTreeNavigation';
-import { TreeRow } from './IssueRow';
+import { ListRow } from './IssueRow';
 import { DetailPanel } from './DetailPanel';
 import { Footer, getFooterHeight } from './Footer';
 import type { BeadsData } from '../types';
@@ -30,7 +30,7 @@ export function TreeView({ data, terminalWidth, terminalHeight }: TreeViewProps)
   );
   const tree = useMemo(() => buildVisibleTree(data, visibleIds), [data, visibleIds]);
 
-  const itemsPerPage = Math.max(terminalHeight - 5 - getFooterHeight(), 5);
+  const itemsPerPage = Math.max(terminalHeight - 6 - getFooterHeight(), 5);
   const { flatNodes, selectedIndex, scrollOffset, selectedIssue } = useTreeNavigation(tree, flattenTree, itemsPerPage);
 
   if (flatNodes.length === 0) {
@@ -69,7 +69,7 @@ export function TreeView({ data, terminalWidth, terminalHeight }: TreeViewProps)
         ) : (
           <Box flexDirection="column" width={terminalWidth}>
             {visibleNodes.map((node, idx) => (
-              <TreeRow
+              <ListRow
                 key={node.issue.id}
                 node={node}
                 isSelected={scrollOffset + idx === selectedIndex}
@@ -88,6 +88,15 @@ export function TreeView({ data, terminalWidth, terminalHeight }: TreeViewProps)
             </Box>
           </Box>
         )}
+      </Box>
+
+      {/* Status legend */}
+      <Box paddingX={1} gap={2}>
+        <Text color={theme.colors.statusOpen}>○ open</Text>
+        <Text color={theme.colors.statusInProgress}>◐ in progress</Text>
+        <Text color={theme.colors.statusBlocked}>● blocked</Text>
+        <Text color={theme.colors.statusClosed}>✓ closed</Text>
+        <Text color={theme.colors.textDim}>❄ deferred</Text>
       </Box>
 
       {/* Footer */}

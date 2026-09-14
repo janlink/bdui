@@ -52,8 +52,8 @@ export interface BeadsStore {
   itemsPerPage: number;
 
   // UI state
-  viewMode: 'kanban' | 'tree' | 'graph' | 'stats' | 'list' | 'memories' | 'create-issue' | 'edit-issue';
-  previousView: 'kanban' | 'tree' | 'graph' | 'stats' | 'list' | 'memories';
+  viewMode: 'kanban' | 'tree' | 'graph' | 'stats' | 'memories' | 'create-issue' | 'edit-issue';
+  previousView: 'kanban' | 'tree' | 'graph' | 'stats' | 'memories';
   showHelp: boolean;
   showDetails: boolean;
   showSearch: boolean;
@@ -123,7 +123,7 @@ export interface BeadsStore {
   toggleJumpToPage: () => void;
   setTheme: (theme: string) => void;
   clearFilters: () => void;
-  setViewMode: (mode: 'kanban' | 'tree' | 'graph' | 'stats' | 'list' | 'memories' | 'create-issue' | 'edit-issue') => void;
+  setViewMode: (mode: 'kanban' | 'tree' | 'graph' | 'stats' | 'memories' | 'create-issue' | 'edit-issue') => void;
   navigateToCreateIssue: () => void;
   navigateToEditIssue: () => void;
   returnToPreviousView: () => void;
@@ -248,8 +248,8 @@ export const useBeadsStore = create<BeadsStore>((set, get) => ({
   itemsPerPage: 10, // Will be recalculated based on terminal height
 
   // UI state
-  viewMode: 'list',
-  previousView: 'list',
+  viewMode: 'tree',
+  previousView: 'tree',
   showHelp: false,
   showDetails: false,
   showSearch: false,

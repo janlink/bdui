@@ -99,11 +99,6 @@ export function CommandBar() {
         setViewMode('memories');
         return { success: true, message: 'Memories view' };
 
-      case 'list':
-      case 'l':
-        setViewMode('list');
-        return { success: true, message: 'List view' };
-
       case 'show':
       case 'visibility':
         toggleVisibilityPanel();

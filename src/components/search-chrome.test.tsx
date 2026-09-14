@@ -72,7 +72,7 @@ beforeEach(() => {
   });
 });
 
-const VIEW_MODES = ['list', 'kanban', 'tree', 'graph', 'stats'] as const;
+const VIEW_MODES = ['kanban', 'tree', 'graph', 'stats'] as const;
 
 test('the search box and filter panel render in every view', async () => {
   for (const viewMode of VIEW_MODES) {
@@ -85,7 +85,7 @@ test('the search box and filter panel render in every view', async () => {
 });
 
 test('the search box echoes the query and its result count', async () => {
-  useBeadsStore.setState({ viewMode: 'list', showSearch: true, searchQuery: 'target' });
+  useBeadsStore.setState({ viewMode: 'tree', showSearch: true, searchQuery: 'target' });
 
   const output = await renderBoard();
 
@@ -95,7 +95,7 @@ test('the search box echoes the query and its result count', async () => {
 });
 
 test('search narrows the list to matches plus their ancestor chain', async () => {
-  useBeadsStore.setState({ viewMode: 'list', searchQuery: 'target' });
+  useBeadsStore.setState({ viewMode: 'tree', searchQuery: 'target' });
 
   const output = await renderBoard();
 
