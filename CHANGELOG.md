@@ -7,6 +7,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.3.0] - 2026-09-14
+
+First standalone release of `bdui-next`, continuing the no-longer-maintained
+[assimelha/bdui](https://github.com/assimelha/bdui).
+
 ### Added
 - Memories view showing `bd remember` entries, with delete and refresh.
 - Statistics dashboard with project-wide metrics and progress bars.
