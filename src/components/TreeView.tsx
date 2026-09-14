@@ -7,6 +7,7 @@ import { useTreeNavigation } from './useTreeNavigation';
 import { ListRow } from './IssueRow';
 import { DetailPanel } from './DetailPanel';
 import { Footer, getFooterHeight } from './Footer';
+import { splitViewLayout } from '../utils/constants';
 import type { BeadsData } from '../types';
 
 interface TreeViewProps {
@@ -31,7 +32,16 @@ export function TreeView({ data, terminalWidth, terminalHeight }: TreeViewProps)
   const tree = useMemo(() => buildVisibleTree(data, visibleIds), [data, visibleIds]);
 
   const itemsPerPage = Math.max(terminalHeight - 6 - getFooterHeight(), 5);
-  const { flatNodes, selectedIndex, scrollOffset, selectedIssue } = useTreeNavigation(tree, flattenTree, itemsPerPage);
+  // Details replace the list only when the terminal is too narrow to split; there
+  // the arrow keys scroll the panel, otherwise they navigate the list.
+  const split = splitViewLayout(terminalWidth);
+  const detailsReplaceList = showDetails && !split.fits;
+  const { flatNodes, selectedIndex, scrollOffset, selectedIssue } = useTreeNavigation(
+    tree,
+    flattenTree,
+    itemsPerPage,
+    detailsReplaceList,
+  );
 
   if (flatNodes.length === 0) {
     return (
@@ -42,6 +52,11 @@ export function TreeView({ data, terminalWidth, terminalHeight }: TreeViewProps)
   }
 
   const visibleNodes = flatNodes.slice(scrollOffset, scrollOffset + itemsPerPage);
+
+  const detailsVisible = showDetails && selectedIssue !== undefined;
+  const detailsAlongside = detailsVisible && split.fits;
+  const listWidth = detailsAlongside ? split.listWidth : terminalWidth;
+  const detailHeight = terminalHeight - 3 - getFooterHeight();
 
   return (
     <Box flexDirection="column" width="100%">
@@ -58,35 +73,47 @@ export function TreeView({ data, terminalWidth, terminalHeight }: TreeViewProps)
       </Box>
 
       <Box flexGrow={1} overflow="hidden">
-        {showDetails && selectedIssue ? (
+        {detailsVisible && !detailsAlongside ? (
           <Box flexGrow={1} overflow="hidden">
             <DetailPanel
-              issue={selectedIssue}
-              maxHeight={terminalHeight - 3 - getFooterHeight()}
+              issue={selectedIssue ?? null}
+              maxHeight={detailHeight}
               availableWidth={terminalWidth}
             />
           </Box>
         ) : (
-          <Box flexDirection="column" width={terminalWidth}>
-            {visibleNodes.map((node, idx) => (
-              <ListRow
-                key={node.issue.id}
-                node={node}
-                isSelected={scrollOffset + idx === selectedIndex}
-                theme={theme}
-                width={terminalWidth}
-              />
-            ))}
+          <>
+            <Box flexDirection="column" flexShrink={0} width={listWidth}>
+              {visibleNodes.map((node, idx) => (
+                <ListRow
+                  key={node.issue.id}
+                  node={node}
+                  isSelected={scrollOffset + idx === selectedIndex}
+                  theme={theme}
+                  width={listWidth}
+                />
+              ))}
 
-            <Box marginTop={1} justifyContent="space-between">
-              <Text color={theme.colors.warning}>{scrollOffset > 0 ? `↑ ${scrollOffset} above` : ''}</Text>
-              <Text color={theme.colors.warning}>
-                {scrollOffset + itemsPerPage < flatNodes.length
-                  ? `↓ ${flatNodes.length - (scrollOffset + itemsPerPage)} below`
-                  : ''}
-              </Text>
+              <Box marginTop={1} justifyContent="space-between">
+                <Text color={theme.colors.warning}>{scrollOffset > 0 ? `↑ ${scrollOffset} above` : ''}</Text>
+                <Text color={theme.colors.warning}>
+                  {scrollOffset + itemsPerPage < flatNodes.length
+                    ? `↓ ${flatNodes.length - (scrollOffset + itemsPerPage)} below`
+                    : ''}
+                </Text>
+              </Box>
             </Box>
-          </Box>
+            {detailsAlongside && (
+              <Box marginLeft={2} flexGrow={1} overflow="hidden">
+                <DetailPanel
+                  issue={selectedIssue ?? null}
+                  maxHeight={detailHeight}
+                  availableWidth={split.panelWidth}
+                  enablePaging={false}
+                />
+              </Box>
+            )}
+          </>
         )}
       </Box>
 

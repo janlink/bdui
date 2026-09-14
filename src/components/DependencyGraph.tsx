@@ -6,6 +6,7 @@ import { getTypeColor, getStatusColor, getPriorityColor } from '../utils/constan
 import { isStatusVisible, type StatusVisibility } from '../utils/visibility';
 import { DetailPanel } from './DetailPanel';
 import { Footer, getFooterHeight } from './Footer';
+import { splitViewLayout } from '../utils/constants';
 import type { Issue, BeadsData } from '../types';
 
 interface DependencyGraphProps {
@@ -100,6 +101,11 @@ export function DependencyGraph({ data, terminalWidth, terminalHeight }: Depende
   // Dense one-line nodes; leave room for header, per-level labels, legend and footer.
   const itemsPerPage = Math.max(terminalHeight - 11 - getFooterHeight(), 5);
 
+  // Details replace the list only when the terminal is too narrow to split; there
+  // the arrow keys scroll the panel, otherwise they navigate the list.
+  const split = splitViewLayout(terminalWidth);
+  const detailsReplaceList = showDetails && !split.fits;
+
   useEffect(() => {
     if (selectedIndex > flatNodes.length - 1) {
       setSelectedIndex(Math.max(0, flatNodes.length - 1));
@@ -110,7 +116,7 @@ export function DependencyGraph({ data, terminalWidth, terminalHeight }: Depende
   useInput((input, key) => {
     if (modalOpen) return;
     // Navigation
-    if ((!showDetails && key.upArrow) || input === 'k') {
+    if ((!detailsReplaceList && key.upArrow) || input === 'k') {
       if (selectedIndex > 0) {
         const newIndex = selectedIndex - 1;
         setSelectedIndex(newIndex);
@@ -122,7 +128,7 @@ export function DependencyGraph({ data, terminalWidth, terminalHeight }: Depende
       }
     }
 
-    if ((!showDetails && key.downArrow) || input === 'j') {
+    if ((!detailsReplaceList && key.downArrow) || input === 'j') {
       if (selectedIndex < flatNodes.length - 1) {
         const newIndex = selectedIndex + 1;
         setSelectedIndex(newIndex);
@@ -161,6 +167,11 @@ export function DependencyGraph({ data, terminalWidth, terminalHeight }: Depende
   const selectedIssue = flatNodes[selectedIndex]?.issue;
   const visibleNodes = flatNodes.slice(scrollOffset, scrollOffset + itemsPerPage);
 
+  const detailsVisible = showDetails && selectedIssue !== undefined;
+  const detailsAlongside = detailsVisible && split.fits;
+  const listWidth = detailsAlongside ? split.listWidth : terminalWidth;
+  const detailHeight = terminalHeight - 4 - 4 - getFooterHeight();
+
   // Group visible nodes back into levels for rendering
   const visibleLevels = new Map<number, GraphNode[]>();
   for (const node of visibleNodes) {
@@ -185,16 +196,17 @@ export function DependencyGraph({ data, terminalWidth, terminalHeight }: Depende
       </Box>
 
       <Box flexGrow={1} overflow="hidden">
-        {showDetails && selectedIssue ? (
+        {detailsVisible && !detailsAlongside ? (
           <Box flexGrow={1} overflow="hidden">
             <DetailPanel
-              issue={selectedIssue}
-              maxHeight={terminalHeight - 4 - 4 - getFooterHeight()}
+              issue={selectedIssue ?? null}
+              maxHeight={detailHeight}
               availableWidth={terminalWidth}
             />
           </Box>
         ) : (
-          <Box flexDirection="column" width={terminalWidth}>
+          <>
+          <Box flexDirection="column" flexShrink={0} width={listWidth}>
             {Array.from(visibleLevels.entries()).map(([levelIdx, levelNodes]) => {
               const totalInLevel = levels[levelIdx]?.length || 0;
 
@@ -218,7 +230,7 @@ export function DependencyGraph({ data, terminalWidth, terminalHeight }: Depende
                     const idStr = `${node.issue.id}  `;
                     const badges = `${nBlockedBy ? ` x${nBlockedBy}` : ''}${nBlocks ? ` >${nBlocks}` : ''}${nChildren ? ` +${nChildren}` : ''}`;
                     const right = ` ${node.issue.issue_type} ${node.issue.displayStatus} P${node.issue.priority}${badges}`;
-                    const titleWidth = Math.max(4, terminalWidth - 2 - gutter.length - idStr.length - right.length - 3);
+                    const titleWidth = Math.max(4, listWidth - 2 - gutter.length - idStr.length - right.length - 3);
                     const rawTitle = node.issue.title || node.issue.id;
                     const title = rawTitle.length > titleWidth ? `${rawTitle.slice(0, titleWidth - 1)}…` : rawTitle;
 
@@ -252,6 +264,17 @@ export function DependencyGraph({ data, terminalWidth, terminalHeight }: Depende
               </Text>
             </Box>
           </Box>
+          {detailsAlongside && (
+            <Box marginLeft={2} flexGrow={1} overflow="hidden">
+              <DetailPanel
+                issue={selectedIssue ?? null}
+                maxHeight={detailHeight}
+                availableWidth={split.panelWidth}
+                enablePaging={false}
+              />
+            </Box>
+          )}
+          </>
         )}
       </Box>
 

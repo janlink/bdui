@@ -249,7 +249,7 @@ export const useBeadsStore = create<BeadsStore>((set, get) => ({
   viewMode: 'tree',
   previousView: 'tree',
   showHelp: false,
-  showDetails: false,
+  showDetails: true,
   showSearch: false,
   showFilter: false,
   showExportDialog: false,

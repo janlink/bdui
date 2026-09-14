@@ -165,9 +165,11 @@ test('roomy full-width details show more than eight wrapped lines without paging
 });
 
 test('all detail layouts use their actual available width', async () => {
+  // Rows fit the narrowest actual panel (Tree/Graph side-by-side ~55 cols) but
+  // would wrap against a stale hardcoded 50, so paging is the regression signal.
   const description = Array.from(
     { length: 14 },
-    (_, index) => `ROW ${String(index + 1).padStart(2, '0')} ${'x'.repeat(45)} END-${index + 1}`,
+    (_, index) => `ROW ${String(index + 1).padStart(2, '0')} ${'x'.repeat(35)} END-${index + 1}`,
   ).join('\n');
   const data = normalizeBeads([
     { id: 'layout-parent', title: 'Layout parent', status: 'open', issue_type: 'epic', priority: 1,
@@ -200,8 +202,8 @@ test('detail paging starts exactly one row past each visible layout boundary', a
   const layouts = [
     { name: 'replacement Kanban', viewMode: 'kanban' as const, columns: 120, pageRows: 15 },
     { name: 'side-by-side Kanban', viewMode: 'kanban' as const, columns: 250, pageRows: 15 },
-    { name: 'Tree', viewMode: 'tree' as const, columns: 120, pageRows: 14 },
-    { name: 'Graph', viewMode: 'graph' as const, columns: 120, pageRows: 9 },
+    { name: 'Tree', viewMode: 'tree' as const, columns: 80, pageRows: 14 },
+    { name: 'Graph', viewMode: 'graph' as const, columns: 80, pageRows: 9 },
   ];
 
   for (const layout of layouts) {
@@ -239,6 +241,64 @@ test('detail paging starts exactly one row past each visible layout boundary', a
       }
     }
   }
+});
+
+test('tree and graph show the list beside details when wide enough', async () => {
+  for (const viewMode of ['tree', 'graph'] as const) {
+    useBeadsStore.setState({
+      data: issues,
+      previousIssues: new Map(issues.byId),
+      viewMode,
+      terminalWidth: 140,
+      terminalHeight: 30,
+      showDetails: true,
+    });
+
+    const output = await renderText(<Board />, 140, 30);
+    // Detail panel is present...
+    expect(output).toContain('Type:');
+    // ...alongside the list, whose non-selected rows only the list renders.
+    expect(output).toMatch(/not done/i);
+  }
+});
+
+test('tree and graph replace the list with details when too narrow', async () => {
+  for (const viewMode of ['tree', 'graph'] as const) {
+    useBeadsStore.setState({
+      data: issues,
+      previousIssues: new Map(issues.byId),
+      viewMode,
+      terminalWidth: 80,
+      terminalHeight: 30,
+      showDetails: true,
+    });
+
+    const output = await renderText(<Board />, 80, 30);
+    expect(output).toContain('Type:');
+    expect(output).not.toMatch(/not done/i);
+  }
+});
+
+test('side-by-side details are a passive follower without an arrow-paging hint', async () => {
+  const description = Array.from({ length: 60 }, (_, index) => `LINE-${index + 1}`).join('\n');
+  const data = normalizeBeads([
+    { id: 'p', title: 'Parent', status: 'open', issue_type: 'epic', priority: 1, description },
+    { id: 'c', title: 'Child row', status: 'open', issue_type: 'task', priority: 2,
+      dependencies: [{ issue_id: 'c', depends_on_id: 'p', type: 'parent-child' }] },
+  ]);
+  useBeadsStore.setState({
+    data,
+    previousIssues: new Map(data.byId),
+    viewMode: 'tree',
+    terminalWidth: 140,
+    terminalHeight: 30,
+    showDetails: true,
+  });
+
+  const output = await renderText(<Board />, 140, 30);
+  expect(output).toContain('Description:'); // detail panel is shown...
+  expect(output).toMatch(/child row/i);     // ...beside the list...
+  expect(output).not.toContain('↓ more');   // ...and the panel does not page on arrows
 });
 
 test('description stays visible before variable-height metadata', async () => {

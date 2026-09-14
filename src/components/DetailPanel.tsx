@@ -69,6 +69,9 @@ interface DetailPanelProps {
   issue: Issue | null;
   maxHeight?: number;
   availableWidth?: number;
+  // Side-by-side layouts navigate the list with the arrow keys, so the panel
+  // there is a passive follower: no arrow-driven description paging.
+  enablePaging?: boolean;
 }
 
 interface DetailPagingOverlays {
@@ -85,7 +88,7 @@ export function detailPagingIsActive(overlays: DetailPagingOverlays): boolean {
   return !Object.values(overlays).some(Boolean);
 }
 
-export function DetailPanel({ issue, maxHeight, availableWidth = 50 }: DetailPanelProps) {
+export function DetailPanel({ issue, maxHeight, availableWidth = 50, enablePaging = true }: DetailPanelProps) {
   const currentTheme = useBeadsStore(state => state.currentTheme);
   const pagingIsActive = useBeadsStore(state => detailPagingIsActive({
     showSearch: state.showSearch,
@@ -125,7 +128,7 @@ export function DetailPanel({ issue, maxHeight, availableWidth = 50 }: DetailPan
     if (!issue?.description) return;
     if (key.downArrow) setDescriptionOffset(descriptionPage.nextOffset);
     if (key.upArrow) setDescriptionOffset(descriptionPage.previousOffset);
-  }, { isActive: pagingIsActive });
+  }, { isActive: pagingIsActive && enablePaging });
 
   if (!issue) {
     return (
@@ -174,7 +177,7 @@ export function DetailPanel({ issue, maxHeight, availableWidth = 50 }: DetailPan
         <Box flexDirection="column" flexShrink={0}>
           <Text bold color={theme.colors.textDim}>Description:</Text>
           <Text color={theme.colors.text}>{descriptionPage.lines.join('\n')}</Text>
-          {(descriptionPage.hasPrevious || descriptionPage.hasMore) && (
+          {enablePaging && (descriptionPage.hasPrevious || descriptionPage.hasMore) && (
             <Text color={theme.colors.textDim}>
               {descriptionPage.hasPrevious ? '↑ previous' : ''}
               {descriptionPage.hasPrevious && descriptionPage.hasMore ? ' | ' : ''}
