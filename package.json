@@ -2,6 +2,15 @@
   "name": "bdui",
   "version": "0.2.0",
   "description": "TUI visualizer for bd (beads) issue tracker",
+  "author": "janlink",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/janlink/bdui.git"
+  },
+  "homepage": "https://github.com/janlink/bdui#readme",
+  "bugs": {
+    "url": "https://github.com/janlink/bdui/issues"
+  },
   "type": "module",
   "main": "src/index.tsx",
   "scripts": {
