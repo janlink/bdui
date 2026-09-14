@@ -8,27 +8,26 @@ export function SearchInput() {
   const setSearchQuery = useBeadsStore(state => state.setSearchQuery);
   const toggleSearch = useBeadsStore(state => state.toggleSearch);
   const getFilteredIssues = useBeadsStore(state => state.getFilteredIssues);
+  const totalCount = useBeadsStore(state => state.data.issues.length);
   const currentTheme = useBeadsStore(state => state.currentTheme);
   const theme = getTheme(currentTheme);
 
   const filteredCount = getFilteredIssues().length;
 
   useInput((input, key) => {
-    // Close search with Escape
-    if (key.escape) {
+    if (key.escape || key.return) {
       toggleSearch();
       return;
     }
 
-    // Handle backspace
     if (key.backspace || key.delete) {
       setSearchQuery(searchQuery.slice(0, -1));
       return;
     }
 
-    // Handle regular input
     if (!key.ctrl && !key.meta && input) {
-      setSearchQuery(searchQuery + input);
+      const printable = input.replace(/\p{Cc}/gu, '');
+      if (printable) setSearchQuery(searchQuery + printable);
     }
   });
 
@@ -48,12 +47,12 @@ export function SearchInput() {
         </Box>
         {searchQuery.trim() && (
           <Text color={theme.colors.textDim}>
-            ({filteredCount} result{filteredCount !== 1 ? 's' : ''})
+            {filteredCount}/{totalCount} match{filteredCount !== 1 ? 'es' : ''}
           </Text>
         )}
       </Box>
       <Text color={theme.colors.textDim}>
-        Type to search in title, description, ID | ESC to close
+        type:x label:x p0-p4, words match id/title/desc/assignee/labels | ESC to close
       </Text>
     </Box>
   );

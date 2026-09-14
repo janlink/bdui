@@ -22,6 +22,8 @@ export interface Issue {
   issue_type: string;
   assignee?: string | null;
   labels?: string[]; // From labels table
+  notes?: string | null; // bd list --json does not emit this yet
+
   created_at: string;
   updated_at: string;
   closed_at?: string | null;
