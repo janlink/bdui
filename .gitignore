@@ -13,3 +13,13 @@ bdui-*
 
 # Homebrew tap (separate repo)
 homebrew-tap/
+
+# Beads / Dolt files (added by bd init)
+.dolt/
+*.db
+.beads-credential-key
+.beads/proxieddb/
+
+# Local, per-developer Claude config (not shared)
+CLAUDE.local.md
+.claude/settings.local.json
