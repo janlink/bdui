@@ -42,21 +42,6 @@ A beautiful, real-time Text User Interface (TUI) visualizer for the [bd (Beads)]
 - An active Beads workspace (`bd where --json` must succeed)
 - [Bun](https://bun.sh) only when running from source; release binaries include the runtime
 
-### Homebrew (macOS)
-
-The easiest way to install on macOS:
-
-```bash
-brew tap assimelha/tap
-brew install bdui
-```
-
-To upgrade to the latest version:
-
-```bash
-brew upgrade bdui
-```
-
 ### Download Pre-built Binary
 
 Download the latest release for your platform:
@@ -430,6 +415,7 @@ MIT License - See LICENSE file for details
 
 ## 🙏 Acknowledgments
 
+- [assimelha/bdui](https://github.com/assimelha/bdui) - The original project this TUI started as a fork of
 - [bd (Beads)](https://github.com/gastownhall/beads) - The issue tracker that powers this TUI
 - [Ink](https://github.com/vadimdemedes/ink) - React for CLIs
 - [Bun](https://bun.sh) - Fast JavaScript runtime
