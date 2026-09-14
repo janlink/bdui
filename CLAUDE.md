@@ -194,9 +194,49 @@ child before launching:
   | sed 's/\x1b\[[0-9;?]*[a-zA-Z]//g; s/\r/\n/g'   # strip ANSI to grep rendered text
 ```
 
+## Branching and pull requests
+
+`main` is protected: direct pushes are rejected for everyone (admins included),
+history is linear, and merges land through squash. Every change therefore goes
+through a branch and a pull request:
+
+```bash
+git switch -c <type>/<topic>
+# ... commits (the commit-msg hook validates each message) ...
+git push -u origin <type>/<topic>
+gh pr create --fill
+gh pr merge --squash --auto --delete-branch   # merges once required checks pass
+```
+
+Required PR checks are `Test, typecheck, and build` (CI) and
+`Validate commit messages` (commit lint). Keep the squash title
+Conventional-Commits compliant, since it becomes the commit on `main`.
+
 ## Release and documentation
 
 Keep `README.md`, package scripts, and GitHub Actions aligned with the actual
 CLI contract and supported views. Do not document `.beads/beads.db`, direct SQL,
 `bd edit`, or file watching. Release binaries must support `--help` and
 `--version` without entering raw terminal mode.
+
+### Cutting a release
+
+Releases are tag-driven: pushing a `v*` tag runs `.github/workflows/release.yml`,
+which verifies the tag matches the package version, runs the quality gate, builds
+the macOS/Linux/Windows binaries, and publishes a GitHub release. Steps:
+
+1. On a branch, bump `version` in `package.json` following SemVer. Pre-1.0,
+   breaking behavior changes bump the minor.
+2. In `CHANGELOG.md`, rename the `## [Unreleased]` heading to
+   `## [x.y.z] - YYYY-MM-DD` and add a fresh empty `## [Unreleased]` above it.
+   The release job extracts the section whose heading is `## [x.y.z]` verbatim as
+   the release-notes body, so the heading must match the tag's version exactly.
+3. Run `bun run check` locally, then open a PR and merge it to `main`.
+4. Tag the merged commit and push it:
+   `git tag -a vX.Y.Z -m "bdui-next X.Y.Z" && git push origin vX.Y.Z`.
+
+The tag must equal `v<package.json version>` or the workflow fails on its version
+check. The changelog is a curated, human-readable summary, not a commit dump;
+GitHub appends a "Full Changelog" compare link with the granular commit history.
+Do not reuse or move the inherited `v0.1.0`/`v0.1.1`/`v0.2.0` tags — they mark the
+upstream fork base, not `bdui-next` releases.
