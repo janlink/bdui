@@ -5,11 +5,11 @@
   "author": "janlink",
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/janlink/bdui.git"
+    "url": "git+https://github.com/janlink/bdui-next.git"
   },
-  "homepage": "https://github.com/janlink/bdui#readme",
+  "homepage": "https://github.com/janlink/bdui-next#readme",
   "bugs": {
-    "url": "https://github.com/janlink/bdui/issues"
+    "url": "https://github.com/janlink/bdui-next/issues"
   },
   "type": "module",
   "main": "src/index.tsx",
