@@ -33,7 +33,13 @@ jobs:
         run: bun install --frozen-lockfile
 
       - name: Install Beads CLI
-        run: npm install --global @beads/bd@1.2.2
+        env:
+          BD_VERSION: "1.2.2"
+        run: |
+          curl -fsSL "https://github.com/gastownhall/beads/releases/download/v${BD_VERSION}/beads_${BD_VERSION}_linux_amd64.tar.gz" -o /tmp/beads.tar.gz
+          tar -xzf /tmp/beads.tar.gz -C /tmp bd
+          sudo install -m 0755 /tmp/bd /usr/local/bin/bd
+          bd --version
 
       - name: Run tests and typecheck
         run: bun run test && bun run typecheck
