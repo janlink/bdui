@@ -8,8 +8,6 @@ export function ConfirmDialog() {
   const confirmDialogData = useBeadsStore(state => state.confirmDialogData);
   const hideConfirm = useBeadsStore(state => state.hideConfirm);
   const currentTheme = useBeadsStore(state => state.currentTheme);
-  const terminalWidth = useBeadsStore(state => state.terminalWidth);
-  const terminalHeight = useBeadsStore(state => state.terminalHeight);
   const theme = getTheme(currentTheme);
 
   useInput((input, key) => {
@@ -33,35 +31,41 @@ export function ConfirmDialog() {
   return (
     <Box
       position="absolute"
-      marginTop={Math.floor(terminalHeight / 2) - 4}
-      marginLeft={Math.floor(terminalWidth / 2) - 25}
-      flexDirection="column"
-      borderStyle="double"
-      borderColor={theme.colors.warning}
-      padding={2}
-      width={50}
+      width="100%"
+      height="100%"
+      justifyContent="center"
+      alignItems="center"
     >
-      <Text bold color={theme.colors.warning}>
-        {confirmDialogData.title}
-      </Text>
-
-      <Box marginY={1}>
-        <Text>{confirmDialogData.message}</Text>
-      </Box>
-
-      <Box gap={2} justifyContent="center">
-        <Text>
-          <Text color={theme.colors.success} bold>[Y]</Text>
-          <Text> Yes</Text>
+      <Box
+        flexDirection="column"
+        borderStyle="double"
+        borderColor={theme.colors.warning}
+        backgroundColor="black"
+        padding={2}
+        width={50}
+      >
+        <Text bold color={theme.colors.warning}>
+          {confirmDialogData.title}
         </Text>
-        <Text>
-          <Text color={theme.colors.error} bold>[N]</Text>
-          <Text> No</Text>
-        </Text>
-      </Box>
 
-      <Box marginTop={1} justifyContent="center">
-        <Text dimColor>Press Y to confirm, N or ESC to cancel</Text>
+        <Box marginY={1}>
+          <Text>{confirmDialogData.message}</Text>
+        </Box>
+
+        <Box gap={2} justifyContent="center">
+          <Text>
+            <Text color={theme.colors.success} bold>[Y]</Text>
+            <Text> Yes</Text>
+          </Text>
+          <Text>
+            <Text color={theme.colors.error} bold>[N]</Text>
+            <Text> No</Text>
+          </Text>
+        </Box>
+
+        <Box marginTop={1} justifyContent="center">
+          <Text dimColor>Press Y to confirm, N or ESC to cancel</Text>
+        </Box>
       </Box>
     </Box>
   );
