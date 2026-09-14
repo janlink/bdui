@@ -10,6 +10,16 @@ workspace, run `bd prime` and use it for local implementation tracking instead
 of markdown task lists. Do not initialize or commit `.beads/` as part of an
 unrelated contribution; see `AGENTS.md` for the local-workspace entry point.
 
+## Commit conventions
+
+Every commit subject must follow [Conventional Commits](https://www.conventionalcommits.org/):
+`<type>(<scope>)?!?: <subject>`, where `<type>` is one of `feat`, `fix`, `docs`,
+`style`, `refactor`, `perf`, `test`, `build`, `ci`, `chore`, or `revert`. Keep
+the subject in the imperative mood and in English. The `.githooks/commit-msg`
+hook enforces this locally (enable it once per clone with
+`git config core.hooksPath .githooks`), and the `Commit lint` workflow re-checks
+each commit in a pull request.
+
 ## Project overview
 
 BD TUI is an Ink/React terminal UI for current Beads workspaces. It displays a

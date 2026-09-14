@@ -397,12 +397,23 @@ cd bdui-next
 # Install dependencies
 bun install
 
+# Enable the Conventional Commits hook (once per clone)
+git config core.hooksPath .githooks
+
 # Run quality checks
 bun run check
 
 # Run in development mode
 bun run dev
 ```
+
+### Commit messages
+
+Commits follow [Conventional Commits](https://www.conventionalcommits.org/):
+`<type>(<scope>)?!?: <subject>` with a type of `feat`, `fix`, `docs`, `style`,
+`refactor`, `perf`, `test`, `build`, `ci`, `chore`, or `revert`. The
+`.githooks/commit-msg` hook checks this locally (enable it with the command
+above), and the `Commit lint` workflow re-checks every commit in a pull request.
 
 ### Code Guidelines
 See `CLAUDE.md` for detailed architecture documentation and guidelines for:

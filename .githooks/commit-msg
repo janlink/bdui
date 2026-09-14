@@ -1,0 +1,24 @@
+#!/usr/bin/env bash
+# Enforces Conventional Commits on the subject line.
+# Enable once per clone: git config core.hooksPath .githooks
+set -euo pipefail
+
+subject=$(head -1 "$1")
+
+# Let git's own generated messages through.
+case "$subject" in
+  "Merge "* | "Revert "* | "fixup! "* | "squash! "*) exit 0 ;;
+esac
+
+pattern='^(feat|fix|docs|style|refactor|perf|test|build|ci|chore|revert)(\(.+\))?!?: .+'
+if ! printf '%s' "$subject" | grep -qE "$pattern"; then
+  {
+    echo "✗ Commit message is not Conventional-Commits compliant:"
+    echo "    $subject"
+    echo
+    echo "  Format: <type>(<scope>)?!?: <subject>"
+    echo "  Types:  feat fix docs style refactor perf test build ci chore revert"
+    echo "  Example: feat: add memories view"
+  } >&2
+  exit 1
+fi
