@@ -54,6 +54,7 @@ function normalizeIssue(value: JsonObject): Issue | null {
     issue_type: stringValue(value.issue_type, stringValue(value.type, 'task')),
     assignee: optionalString(value.assignee),
     labels: stringArray(value.labels),
+    notes: optionalString(value.notes),
     created_at: stringValue(value.created_at),
     updated_at: stringValue(value.updated_at),
     closed_at: optionalString(value.closed_at),

@@ -2,6 +2,7 @@ import { create } from 'zustand';
 import type { BeadsData, Issue } from '../types';
 import { detectStatusChanges, notifyStatusChange } from '../utils/notifications';
 import { LAYOUT, hasActiveFilters } from '../utils/constants';
+import { parseSearchQuery, issueMatchesParsedQuery, type ParsedQuery } from '../utils/search-query';
 import {
   STATUS_KEYS,
   DEFAULT_STATUS_VISIBILITY,
@@ -159,13 +160,9 @@ const ALL_STATUSES_VISIBLE: StatusVisibility = {
 function matchesQuery(
   issue: Issue,
   filter: BeadsStore['filter'],
-  searchQuery: string,
+  parsed: ParsedQuery,
 ): boolean {
-  const query = searchQuery.trim().toLowerCase();
-  if (query
-    && !issue.title.toLowerCase().includes(query)
-    && !issue.description?.toLowerCase().includes(query)
-    && !issue.id.toLowerCase().includes(query)) return false;
+  if (!issueMatchesParsedQuery(issue, parsed)) return false;
 
   if (filter.assignee && issue.assignee !== filter.assignee) return false;
   if (filter.tags?.length && !issue.labels?.some(label => filter.tags?.includes(label))) return false;
@@ -181,8 +178,9 @@ function filterIssues(
   searchQuery: string,
   statusVisibility: StatusVisibility,
 ): Issue[] {
+  const parsed = parseSearchQuery(searchQuery);
   return data.issues.filter(issue =>
-    isStatusVisible(issue, statusVisibility) && matchesQuery(issue, filter, searchQuery));
+    isStatusVisible(issue, statusVisibility) && matchesQuery(issue, filter, parsed));
 }
 
 // Search, filter, dialogs, and forms own keyboard input exclusively; every
@@ -364,9 +362,10 @@ export const useBeadsStore = create<BeadsStore>((set, get) => ({
     const statusVisible = computeVisibleIds(data, statusVisibility);
     if (!hasActiveFilters(filter, searchQuery)) return statusVisible;
 
+    const parsed = parseSearchQuery(searchQuery);
     const matched = new Set<string>();
     for (const issue of data.issues) {
-      if (statusVisible.has(issue.id) && matchesQuery(issue, filter, searchQuery)) {
+      if (statusVisible.has(issue.id) && matchesQuery(issue, filter, parsed)) {
         matched.add(issue.id);
       }
     }

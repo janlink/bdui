@@ -72,3 +72,9 @@ test('escape closes the search box', async () => {
   await typeIntoSearch(['a', '']);
   expect(useBeadsStore.getState().showSearch).toBe(false);
 });
+
+test('enter closes the box and never leaves a carriage return in the query', async () => {
+  const query = await typeIntoSearch(['t', 'a', 's', 'k', '\r']);
+  expect(query).toBe('task');
+  expect(useBeadsStore.getState().showSearch).toBe(false);
+});

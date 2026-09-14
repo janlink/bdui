@@ -172,6 +172,37 @@ test('row views never resurface an issue the status toggle hides', () => {
   expect([...useBeadsStore.getState().getRowVisibleIds()]).toEqual(['todo']);
 });
 
+test('structured search tokens narrow the Kanban columns', () => {
+  const store = useBeadsStore.getState();
+  store.setData(data());
+
+  useBeadsStore.getState().setSearchQuery('type:bug');
+  expect(useBeadsStore.getState().getVisibleColumns().open.map(issue => issue.id)).toEqual(['issue-visible']);
+
+  useBeadsStore.getState().setSearchQuery('type:task');
+  expect(useBeadsStore.getState().getVisibleColumns().open.map(issue => issue.id))
+    .toEqual(['issue-hidden', 'issue-third']);
+
+  useBeadsStore.getState().setSearchQuery('p3');
+  expect(useBeadsStore.getState().getVisibleColumns().open.map(issue => issue.id)).toEqual(['issue-third']);
+});
+
+test('search tokens AND with the panel filter across row views', () => {
+  const store = useBeadsStore.getState();
+  store.setData(normalizeBeads([
+    { id: 'epic', title: 'Platform work', status: 'open', issue_type: 'epic', priority: 1 },
+    { id: 'epic.bug', title: 'Fix it', status: 'open', issue_type: 'bug', priority: 0,
+      dependencies: [{ issue_id: 'epic.bug', depends_on_id: 'epic', type: 'parent-child' }] },
+    { id: 'epic.task', title: 'Do it', status: 'open', issue_type: 'task', priority: 0,
+      dependencies: [{ issue_id: 'epic.task', depends_on_id: 'epic', type: 'parent-child' }] },
+  ]));
+
+  useBeadsStore.getState().setFilter({ priority: 0 });
+  useBeadsStore.getState().setSearchQuery('type:bug');
+
+  expect([...useBeadsStore.getState().getRowVisibleIds()].sort()).toEqual(['epic', 'epic.bug']);
+});
+
 test('global ID selection clears filters so the selected issue remains visible', () => {
   const store = useBeadsStore.getState();
   store.setData(data());

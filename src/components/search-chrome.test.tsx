@@ -84,14 +84,14 @@ test('the search box and filter panel render in every view', async () => {
   }
 });
 
-test('the search box echoes the query and its result count', async () => {
+test('the search box echoes the query and its N/M match count', async () => {
   useBeadsStore.setState({ viewMode: 'tree', showSearch: true, searchQuery: 'target' });
 
   const output = await renderBoard();
 
   expect(output).toContain('Search: ');
   expect(output).toContain('target');
-  expect(output).toContain('(1 result)');
+  expect(output).toContain('1/3 match');
 });
 
 test('search narrows the list to matches plus their ancestor chain', async () => {
